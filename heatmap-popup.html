@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>PassMed Heatmap Data</title>
+    <style>
+        body {
+            width: 400px;
+            min-height: 500px;
+            margin: 0;
+            padding: 15px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            font-size: 18px;
+            margin: 0 0 15px 0;
+            color: #333;
+        }
+
+        .status {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .status-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .status-label {
+            color: #666;
+        }
+
+        .status-value {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .statistics {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .stat-box {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #0066cc;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .actions {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 8px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .button:last-child {
+            margin-bottom: 0;
+        }
+
+        .button-primary {
+            background: #0066cc;
+            color: white;
+        }
+
+        .button-primary:hover {
+            background: #0052a3;
+        }
+
+        .button-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .button-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .button-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .button-danger:hover {
+            background: #c82333;
+        }
+
+        .message {
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .message-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        h2 {
+            font-size: 16px;
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>PassMed Heatmap Data Extractor</h1>
+    
+    <div id="loading" class="loading">Loading...</div>
+    
+    <div id="content" style="display: none;">
+        <div id="no-data" class="no-data" style="display: none;">
+            <p>No heatmap data extracted yet.</p>
+            <p>Visit PassMed and view your progress heatmap to capture data.</p>
+        </div>
+        
+        <div id="data-content" style="display: none;">
+            <div class="status">
+                <h2>Data Status</h2>
+                <div class="status-item">
+                    <span class="status-label">Last Updated:</span>
+                    <span class="status-value" id="last-updated">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Total Entries:</span>
+                    <span class="status-value" id="total-entries">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Date Range:</span>
+                    <span class="status-value" id="date-range">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Extract Count:</span>
+                    <span class="status-value" id="intercept-count">-</span>
+                </div>
+            </div>
+            
+            <div class="statistics">
+                <h2>Statistics</h2>
+                <div class="stat-grid">
+                    <div class="stat-box">
+                        <div class="stat-value" id="total-questions">-</div>
+                        <div class="stat-label">Total Questions</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="avg-percentage">-</div>
+                        <div class="stat-label">Average Score</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="current-streak">-</div>
+                        <div class="stat-label">Current Streak</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="longest-streak">-</div>
+                        <div class="stat-label">Longest Streak</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="actions">
+                <h2>Actions</h2>
+                <button class="button button-primary" id="export-json">Export as JSON</button>
+                <button class="button button-secondary" id="export-csv">Export as CSV</button>
+                <button class="button button-secondary" id="refresh">Refresh Data</button>
+                <button class="button button-danger" id="clear-data">Clear All Data</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="message" class="message"></div>
+    
+    <script src="heatmap-utils.js"></script>
+    <script src="heatmap-popup.js"></script>
+</body>
+</html>
