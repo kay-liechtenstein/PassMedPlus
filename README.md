@@ -1,2 +1,29 @@
-# PassMedPlus
-Chrome extension for PassMedicine, a friend of most medics in the UK.
+## PassMedPlus: PassMed Progress Tracker Extension
+
+Hi! I'm Kay, y3 medic at Manchester uni. I've made a Google Chrome extension that automatically extracts your progress data from PassMed and syncs it with your own progress tracker. Heatmap is visibly quite unhelpful imo so this tracker employs more appropriate graph types.
+
+## Installation
+
+1. Place this folder somewhere (e.g. your desktop).
+2. Open google chrome, locate extension icon (puzzle piece-like icon).
+3. Go to "Manage Extension".
+4. Click on "Load Unpacked" on the top left.
+5. Select this entire folder.
+
+## General Instruction
+
+I injected extension buttons to https://www.passmedicine.com/menu.php?revise=all only (i.e. you should load this specific URL). 
+
+"Sync Progress" button allows your browser to read your past progress data. This is done by redirecting you to "Review Questions" section and read all problems you've solved in the past. 
+
+Once synced, click on "Progress Tracker" button to access your full dashboard.
+
+If you have any question, could you please re-read the instructions.
+
+## Caveat
+
+This works only on Google Chrome, meaning that you cannot use this on Safari, Firebox, or any other extension. This is due to their security restrictions. Furthermore, iOS and Android does not allow for any extension loading. I understand many of you use iPad for using PassMed and this is an absolute inconvenience. I feel sorry for you...  
+
+## Update Information
+
+Last updated: 22:35 (GMT) 22nd Nov 2025.

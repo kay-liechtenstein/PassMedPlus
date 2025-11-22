@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            width: 350px;
+            min-height: 400px;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f9fafb;
+        }
+        .header {
+            background: linear-gradient(135deg, #0ABAB5 0%, #089A96 50%, #067A76 100%);
+            color: white;
+            padding: 16px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 500;
+        }
+        .content {
+            padding: 16px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            text-align: center;
+            background-color: #e0e0e0;
+            color: #333;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .button {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .button-primary {
+            background: linear-gradient(135deg, #0ABAB5 0%, #089A96 50%, #067A76 100%);
+            color: white;
+        }
+        .button-primary:hover:not(:disabled) {
+            /* Hover color handled by JavaScript */
+        }
+        .button-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        .button-secondary:hover:not(:disabled) {
+            background-color: #5a6268;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 16px 0;
+            border-top: 1px solid #e0e0e0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #0ABAB5 0%, #089A96 50%, #067A76 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: inline-block;
+            line-height: 1.2;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+        .today-stat .stat-value {
+            background: linear-gradient(135deg, #28a745 0%, #218838 50%, #1e7e34 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+            display: inline-block;
+        }
+        .today-stat .stat-label {
+            color: #28a745;
+            font-weight: 600;
+        }
+        h3 {
+            font-size: 16px;
+            margin: 16px 0 8px 0;
+            color: #333;
+        }
+        .recent-list {
+            background: white;
+            border-radius: 6px;
+            padding: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .recent-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+        .recent-item:last-child {
+            border-bottom: none;
+        }
+        .last-sync {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            margin-top: 12px;
+        }
+        #data {
+            margin-top: 16px;
+        }
+        #data p {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        .footer {
+            text-align: center;
+            padding: 12px;
+            font-size: 12px;
+            color: #888;
+            border-top: 1px solid #e0e0e0;
+            background-color: #f9fafb;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>PassMed Progress Tracker</h1>
+    </div>
+    <div class="content">
+        <div id="status" class="status">Loading data...</div>
+        
+        <button id="viewBtn" class="button button-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                <line x1="18" y1="20" x2="18" y2="10"></line>
+                <line x1="12" y1="20" x2="12" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="14"></line>
+                <path d="M2 20h20"></path>
+            </svg>
+            <span style="vertical-align: middle;">View Full Dashboard</span>
+        </button>
+        
+        <div id="data">
+            <p>Loading...</p>
+        </div>
+    </div>
+    <div class="footer">
+        © Kay
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>

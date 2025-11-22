@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "PassMed Progress Tracker",
+  "version": "1.0",
+  "description": "Extract progress data from PassMed and sync with your UKMLA tracker",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "notifications"
+  ],
+  "host_permissions": [
+    "https://www.passmedicine.com/*",
+    "https://passmedicine.com/*",
+    "https://phpstack-1223052-4374760.cloudwaysapps.com/*",
+    "https://*.passmed.app/*",
+    "https://passmed.app/*",
+    "http://localhost:5000/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.passmedicine.com/*", "https://passmedicine.com/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["viewer.html", "viewer.js", "popup.html", "popup.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
