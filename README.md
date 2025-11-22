@@ -22,7 +22,7 @@ If you have any question, could you please re-read the instructions.
 
 ## Caveat
 
-This works only on Google Chrome, meaning that you cannot use this on Safari, Firebox, or any other extension. This is due to their security restrictions. Furthermore, iOS and Android does not allow for any extension loading. I understand many of you use iPad for using PassMed and this is an absolute inconvenience. I feel sorry for you...  
+This works only on Google Chrome, meaning that you cannot use this on Safari, Firebox, or any other extension. This is due to their security restrictions. Furthermore, iOS and Android do not allow for any extension loading. I understand many of you use iPad for  PassMed and I agree this is an absolute inconvenience. I feel sorry for you...  
 
 ## Update Information
 
