@@ -45,7 +45,6 @@ async function loadData() {
         
         showData();
     } catch (error) {
-        console.error('Error loading data:', error);
         showMessage('Error loading data', 'error');
     }
 }
@@ -71,7 +70,6 @@ async function exportJSON() {
         
         showMessage('Data exported as JSON', 'success');
     } catch (error) {
-        console.error('Error exporting JSON:', error);
         showMessage('Error exporting data', 'error');
     }
 }
@@ -81,7 +79,6 @@ async function exportCSV() {
         await HeatmapUtils.exportAsCSV();
         showMessage('Data exported as CSV', 'success');
     } catch (error) {
-        console.error('Error exporting CSV:', error);
         showMessage('Error exporting data', 'error');
     }
 }
@@ -93,7 +90,6 @@ async function clearData() {
             showMessage('Data cleared successfully', 'success');
             setTimeout(() => loadData(), 1000);
         } catch (error) {
-            console.error('Error clearing data:', error);
             showMessage('Error clearing data', 'error');
         }
     }

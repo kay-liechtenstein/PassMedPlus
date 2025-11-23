@@ -72,7 +72,6 @@ async function syncDataToStorage(data, isAuto = false) {
         
         return { success: true, synced: updatedCount, totalDays: existingData.totalDays };
     } catch (error) {
-        console.error('Error syncing to storage:', error);
         return { success: false, error: error.message };
     }
 }
@@ -83,13 +82,11 @@ async function getProgressData() {
         const stored = await chrome.storage.sync.get(['progressData']);
         return stored.progressData || { daily: {} };
     } catch (error) {
-        console.error('Error reading from sync storage, trying local:', error);
         try {
             // Fallback to local storage if sync fails
             const local = await chrome.storage.local.get(['progressData']);
             return local.progressData || { daily: {} };
         } catch (localError) {
-            console.error('Error reading from local storage:', localError);
             return { daily: {} };
         }
     }
@@ -97,5 +94,4 @@ async function getProgressData() {
 
 // Handle installation
 chrome.runtime.onInstalled.addListener(() => {
-    console.log('PassMed Progress Tracker installed');
 });

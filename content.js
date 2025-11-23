@@ -68,8 +68,7 @@ async function injectSyncButton() {
     
     // Add click handler
     syncButton.onclick = async () => {
-        console.log('Sync button clicked, checking if on Review Questions page...');
-        
+            
         // Update button to show it's working
         syncButton.innerHTML = `
             <style>
@@ -93,17 +92,14 @@ async function injectSyncButton() {
             // Check for "Show all questions" button and click it
             const showAllButton = document.querySelector('#showallquestions');
             if (showAllButton && !showAllButton.textContent.includes('Loading')) {
-                console.log('Clicking show all questions...');
                 showAllButton.click();
                 await waitForAllQuestionsToLoad();
             }
             
             // Extract data
             setTimeout(async () => {
-                console.log('Extracting data...');
-                const reviewData = extractQuestionsFromReviewTable();
-                console.log('Extracted:', reviewData.totalQuestions, 'questions');
-                
+                    const reviewData = extractQuestionsFromReviewTable();
+                    
                 if (reviewData.totalQuestions > 0) {
                     // Save data
                     const today = new Date().toISOString().split('T')[0];
@@ -160,7 +156,6 @@ async function injectSyncButton() {
             
         } else {
             // Not on Review Questions - need to navigate
-            console.log('Not on Review Questions page, navigating there...');
             
             // Mark that we're syncing so we can extract data after navigation
             await chrome.storage.local.set({ 
@@ -173,11 +168,9 @@ async function injectSyncButton() {
             );
             
             if (reviewLink) {
-                console.log('Found Review Questions link, clicking it...');
                 reviewLink.click();
             } else {
                 // Fallback: try direct navigation
-                console.log('No Review Questions link found, navigating directly...');
                 window.location.href = window.location.origin + window.location.pathname + '?section=review_questions';
             }
         }
@@ -217,7 +210,6 @@ async function injectTrackerButton() {
             themeColor = localResult.themeColor || syncResult.themeColor || '#0ABAB5';
         }
     } catch (error) {
-        console.error('PassMed Tracker: Error loading theme color:', error);
     }
     
     // Create button container
@@ -385,7 +377,6 @@ async function injectTrackerButton() {
                     button.style.transform = 'scale(1)';
                 }, 200);
             } catch (error) {
-                console.error('PassMed Tracker: Error saving color:', error);
             }
             
             // Update popup if it's open
@@ -581,19 +572,16 @@ async function updateButtonWithTodayStats(button) {
             // User needs to refresh the page
             return;
         }
-        console.error('Error updating button stats:', error);
     }
 }
 
 // Inject buttons when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        console.log('DOM loaded, injecting buttons...');
-        injectTrackerButton();
+            injectTrackerButton();
         injectSyncButton();
     });
 } else {
-    console.log('DOM already loaded, injecting buttons...');
     injectTrackerButton();
     injectSyncButton();
 }
@@ -1241,10 +1229,8 @@ async function checkForReviewDataFreshness() {
 async function handleAutoDataExtraction() {
     // Check if we're in the middle of a sync process
     const storage = await chrome.storage.local.get(['syncInProgress']);
-    console.log('handleAutoDataExtraction - syncInProgress:', storage.syncInProgress, 'isOnReviewQuestionsPage:', isOnReviewQuestionsPage());
     
     if (storage.syncInProgress && isOnReviewQuestionsPage()) {
-        console.log('Sync in progress and on Review Questions page, extracting data...');
         
         // Clear the sync flag
         await chrome.storage.local.remove(['syncInProgress']);
@@ -1273,17 +1259,14 @@ async function handleAutoDataExtraction() {
             // Check for "Show all questions" button and click it
             const showAllButton = document.querySelector('#showallquestions');
             if (showAllButton && !showAllButton.textContent.includes('Loading')) {
-                console.log('Clicking show all questions...');
                 showAllButton.click();
                 await waitForAllQuestionsToLoad();
             }
             
             // Extract data
             setTimeout(async () => {
-                console.log('Extracting data...');
-                const reviewData = extractQuestionsFromReviewTable();
-                console.log('Extracted:', reviewData.totalQuestions, 'questions');
-                
+                    const reviewData = extractQuestionsFromReviewTable();
+                    
                 if (reviewData.totalQuestions > 0) {
                     // Save data
                     const today = new Date().toISOString().split('T')[0];
@@ -1377,7 +1360,6 @@ async function handleAutoDataExtraction() {
 // Always call handleAutoDataExtraction when page loads
 // Use both DOMContentLoaded and load to ensure it runs
 if (document.readyState === 'complete') {
-    console.log('Document already complete, running auto extraction...');
     setTimeout(async () => {
         await handleAutoDataExtraction();
         if (isOnReviewQuestionsPage()) {
@@ -1387,7 +1369,6 @@ if (document.readyState === 'complete') {
 } else {
     window.addEventListener('load', () => {
         setTimeout(async () => {
-            console.log('Page loaded, checking for auto data extraction...');
             await handleAutoDataExtraction();
             
             // Auto sync periodically

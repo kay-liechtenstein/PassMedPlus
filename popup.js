@@ -2,9 +2,7 @@
 // Version: 2.0 - Fixed extractBtn reference
 
 // Wait for DOM to be ready
-console.log('Popup.js loaded - Version 2.0');
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM Content Loaded');
     // DOM elements
     const statusDiv = document.getElementById('status');
     const dataDiv = document.getElementById('data');
@@ -229,7 +227,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 dataDiv.innerHTML = '<p>No data stored yet. Visit PassMed and data will sync automatically!</p>';
             }
         } catch (error) {
-            console.error('Error loading data:', error);
             dataDiv.innerHTML = '<p>Error loading data</p>';
         }
     }
@@ -241,7 +238,6 @@ document.addEventListener('DOMContentLoaded', () => {
             chrome.tabs.create({ url: chrome.runtime.getURL('viewer.html') });
         });
     } else {
-        console.error('View button not found');
     }
 
     // Initialize on load
