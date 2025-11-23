@@ -24,7 +24,6 @@ const HeatmapUtils = {
             const result = await this.getData();
             return result.data?.parsed || [];
         } catch (error) {
-            console.error('Error getting parsed entries:', error);
             return [];
         }
     },
@@ -143,7 +142,6 @@ const HeatmapUtils = {
         const entries = await this.getParsedEntries();
         
         if (entries.length === 0) {
-            console.log('No data to export');
             return;
         }
         
@@ -163,7 +161,6 @@ const HeatmapUtils = {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
-        console.log('Data exported as CSV');
     },
 
     // Clear stored data

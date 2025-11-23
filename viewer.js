@@ -17,14 +17,12 @@ async function initDashboard() {
         
         // Get data from Chrome storage
         const response = await chrome.runtime.sendMessage({ action: 'getProgressData' });
-        console.log('Response from background:', response);
         
         if (!response || !response.success) {
             throw new Error('Failed to get data from background script');
         }
         
         progressData = response.data || { daily: {} };
-        console.log('Progress data loaded:', progressData);
         
         const hasData = Object.keys(progressData.daily).length > 0;
         
@@ -49,7 +47,6 @@ async function initDashboard() {
             document.getElementById('syncStatus').textContent = 'No data synced yet. Visit PassMed to start tracking!';
         }
     } catch (error) {
-        console.error('Error loading data:', error);
         document.getElementById('loading').textContent = 'Error loading data. Please check the extension.';
         document.getElementById('syncStatus').textContent = 'Error: ' + error.message;
     }
@@ -102,7 +99,6 @@ function updateSyncStatus() {
 
 // Initialize charts
 function initCharts() {
-    console.log('Initializing charts with data:', progressData);
     
     // Destroy existing charts if any
     if (charts.daily) {
@@ -118,7 +114,6 @@ function initCharts() {
     // Daily progress chart
     const dailyCanvas = document.getElementById('dailyChart');
     if (!dailyCanvas) {
-        console.error('Daily chart canvas not found');
         return;
     }
     
@@ -179,13 +174,11 @@ function initCharts() {
     // Weekly progress chart
     const weeklyCanvas = document.getElementById('weeklyChart');
     if (!weeklyCanvas) {
-        console.error('Weekly chart canvas not found');
         return;
     }
     
     const weeklyCtx = weeklyCanvas.getContext('2d');
     const weeklyData = getWeeklyData();
-    console.log('Weekly chart data:', weeklyData);
     
     // Create gradient for weekly chart background
     const weeklyGradient = weeklyCtx.createLinearGradient(0, 0, 0, 400);
@@ -234,13 +227,11 @@ function initCharts() {
     // Cumulative progress chart
     const cumulativeCanvas = document.getElementById('cumulativeChart');
     if (!cumulativeCanvas) {
-        console.error('Cumulative chart canvas not found');
         return;
     }
     
     const cumulativeCtx = cumulativeCanvas.getContext('2d');
     const cumulativeData = getCumulativeData();
-    console.log('Cumulative chart data:', cumulativeData);
     
     // Create gradient for cumulative chart background
     const cumulativeGradient = cumulativeCtx.createLinearGradient(0, 0, 0, 400);
@@ -337,7 +328,6 @@ function getDailyData(days) {
         }
     }
     
-    console.log('Daily chart data:', { dates, values }); // Debug log
     
     return {
         labels: dates,
