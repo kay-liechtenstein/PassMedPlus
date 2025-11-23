@@ -14,7 +14,7 @@ Hi! I'm Kay, y3 medic at Manchester uni. I've made a Google Chrome extension tha
 
 I injected extension buttons to https://www.passmedicine.com/menu.php?revise=all only (i.e. you should load this specific URL). 
 
-"Sync Progress" button allows your browser to read your past progress data. This is done by redirecting you to "Review Questions" section and read all problems you've solved in the past. 
+"Sync Progress" button allows your browser to read your past progress data. This is done by redirecting you to "Review Questions" section and read all problems you've solved in the past. Occasionally you may see sync process that never ends; if so just reload the page and it should work.
 
 Once synced, click on "Progress Tracker" button to access your full dashboard.
 
@@ -22,7 +22,7 @@ If you have any question, could you please re-read the instructions.
 
 ## Caveat
 
-This works only on Google Chrome, meaning that you cannot use this on Safari, Firebox, or any other extension. This is due to their security restrictions. Furthermore, iOS and Android do not allow for any extension loading. I understand many of you use iPad for  PassMed and I agree this is an absolute inconvenience. I feel sorry for you...  
+This works only on Google Chrome, meaning that you cannot use this on Safari, Firebox, or any other extension. This is due to their security restrictions. Furthermore, iOS and Android do not allow for any extension loading. I understand many of you use PassMed on iPad and I agree this is an absolute inconvenience. I feel sorry for you...  
 
 ## Update Information
 
