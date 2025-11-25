@@ -2,8 +2,10 @@
 
 // Function to inject the sync button at the top of all PassMed pages
 async function injectSyncButton() {
-    // Only show on the main revise page
-    if (window.location.href !== 'https://www.passmedicine.com/menu.php?revise=all') {
+    // Only show on the specific PassMedicine menu pages
+    const currentURL = window.location.href;
+    if (currentURL !== 'https://www.passmedicine.com/menu.php?revise=all' && 
+        currentURL !== 'https://www.passmedicine.com/menu.php') {
         return;
     }
     
@@ -181,8 +183,10 @@ async function injectSyncButton() {
 
 // Function to inject the tracker button
 async function injectTrackerButton() {
-    // Only show on the main revise page
-    if (window.location.href !== 'https://www.passmedicine.com/menu.php?revise=all') {
+    // Only show on the specific PassMedicine menu pages
+    const currentURL = window.location.href;
+    if (currentURL !== 'https://www.passmedicine.com/menu.php?revise=all' && 
+        currentURL !== 'https://www.passmedicine.com/menu.php') {
         return;
     }
     
