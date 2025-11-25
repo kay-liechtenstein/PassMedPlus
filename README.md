@@ -12,9 +12,9 @@ Hi! I'm Kay, y3 medic at Manchester uni. I've made a Google Chrome extension tha
 
 ## General Instruction
 
-I injected extension buttons to https://www.passmedicine.com/menu.php?revise=all only (i.e. you should load this specific URL). 
+I injected extension buttons to https://www.passmedicine.com/menu.php or https://www.passmedicine.com/menu.php?revise=all only (i.e. you should load one of these specific URLs). 
 
-"Sync Progress" button allows your browser to read your past progress data. This is done by redirecting you to "Review Questions" section and read all problems you've solved in the past. Occasionally you may see sync process that never ends; if so just reload the page and it should work.
+"Sync Progress" button allows your browser to read your past progress data. This is done by redirecting you to "Review Questions" section and read all problems you've solved in the past. Occasionally you may see sync process that never ends- if so just reload the page and it should work. I'm guessing this happens when there's been a while since last login, but I'm too lazy to fix it sorry.
 
 Once synced, click on "Progress Tracker" button to access your full dashboard.
 
@@ -26,4 +26,4 @@ This works only on Google Chrome, meaning that you cannot use this on Safari, Fi
 
 ## Update Information
 
-Last updated: 22:35 (GMT) 22nd Nov 2025.
+Last updated: 18:55 (GMT) 25th Nov 2025.
