@@ -376,18 +376,44 @@ function getWeeklyData() {
 
 // Get cumulative data for chart
 function getCumulativeData() {
-    const dates = Object.keys(progressData.daily).sort();
+    const allDates = Object.keys(progressData.daily).sort();
+    
+    if (allDates.length === 0) {
+        return {
+            labels: [],
+            datasets: [{
+                label: 'Total Questions',
+                data: [],
+                borderColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color') || '#0ABAB5',
+                backgroundColor: (getComputedStyle(document.documentElement).getPropertyValue('--primary-color') || '#0ABAB5') + '1A',
+                fill: true
+            }]
+        };
+    }
+    
     let cumulative = 0;
     const cumulativeData = [];
     const labels = [];
     
-    dates.forEach(dateStr => {
-        cumulative += progressData.daily[dateStr];
+    // Get first and last dates
+    const firstDate = new Date(allDates[0]);
+    const today = new Date();
+    
+    // Generate all days from first to today
+    const currentDate = new Date(firstDate);
+    while (currentDate <= today) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        
+        // Add the questions for this day (0 if no activity)
+        cumulative += progressData.daily[dateStr] || 0;
         cumulativeData.push(cumulative);
         
-        const date = new Date(dateStr);
-        labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-    });
+        // Add label for this day
+        labels.push(currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+        
+        // Move to next day
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
     
     return {
         labels: labels,
