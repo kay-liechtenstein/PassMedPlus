@@ -344,16 +344,43 @@ function getDailyData(days) {
 // Get weekly data for chart
 function getWeeklyData() {
     const weeklyTotals = {};
-    const startDate = new Date('2025-09-14'); // Starting date
     
-    // Group by week
-    Object.entries(progressData.daily).forEach(([dateStr, count]) => {
-        const date = new Date(dateStr);
-        const weekStart = getWeekStart(date);
-        const weekKey = weekStart.toISOString().split('T')[0];
+    // Get all dates from daily data
+    const allDates = Object.keys(progressData.daily).sort();
+    
+    if (allDates.length === 0) {
+        // If no data at all, show current week with 0
+        const currentWeekStart = getWeekStart(new Date());
+        weeklyTotals[currentWeekStart.toISOString().split('T')[0]] = 0;
+    } else {
+        // Find the earliest week with data
+        const firstDate = new Date(allDates[0]);
+        const firstWeekStart = getWeekStart(firstDate);
         
-        weeklyTotals[weekKey] = (weeklyTotals[weekKey] || 0) + count;
-    });
+        // Get current week
+        const currentWeekStart = getWeekStart(new Date());
+        
+        // Generate all weeks from first week to current week
+        const weekStart = new Date(firstWeekStart);
+        while (weekStart <= currentWeekStart) {
+            const weekKey = weekStart.toISOString().split('T')[0];
+            weeklyTotals[weekKey] = 0; // Initialize with 0
+            
+            // Move to next week
+            weekStart.setDate(weekStart.getDate() + 7);
+        }
+        
+        // Now populate with actual data
+        Object.entries(progressData.daily).forEach(([dateStr, count]) => {
+            const date = new Date(dateStr);
+            const weekStartForDate = getWeekStart(date);
+            const weekKey = weekStartForDate.toISOString().split('T')[0];
+            
+            if (weeklyTotals.hasOwnProperty(weekKey)) {
+                weeklyTotals[weekKey] += count;
+            }
+        });
+    }
     
     // Sort and prepare data
     const weeks = Object.keys(weeklyTotals).sort();
