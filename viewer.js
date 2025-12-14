@@ -3,6 +3,14 @@ let progressData = { daily: {} };
 let charts = {};
 let currentDailyRange = 7; // Track the current selected range
 
+// Helper function to get local date string without timezone issues
+function getLocalDateString(date = new Date()) {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 // Initialize the dashboard
 async function initDashboard() {
     try {
@@ -60,7 +68,7 @@ function updateStats() {
     const avgPerDay = daysActive > 0 ? (totalQuestions / daysActive).toFixed(1) : '0';
     
     // Get today's questions
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString();
     const todayQuestions = progressData.daily[today] || 0;
     
     // Calculate current streak
@@ -71,7 +79,7 @@ function updateStats() {
     for (let i = 0; i < 365; i++) {
         const checkDate = new Date(todayDate);
         checkDate.setDate(checkDate.getDate() - i);
-        const dateStr = checkDate.toISOString().split('T')[0];
+        const dateStr = getLocalDateString(checkDate);
         
         if (progressData.daily[dateStr]) {
             streak++;
@@ -294,7 +302,7 @@ function getDailyData(days) {
             // Generate all days from first to today
             const currentDate = new Date(firstDate);
             while (currentDate <= today) {
-                const dateStr = currentDate.toISOString().split('T')[0];
+                const dateStr = getLocalDateString(currentDate);
                 dates.push(currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
                 values.push(progressData.daily[dateStr] || 0); // Include 0 for days with no activity
                 
@@ -320,7 +328,7 @@ function getDailyData(days) {
             for (let i = days - 1; i >= 0; i--) {
                 const date = new Date(today);
                 date.setDate(date.getDate() - i);
-                const dateStr = date.toISOString().split('T')[0];
+                const dateStr = getLocalDateString(date);
                 
                 dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
                 values.push(progressData.daily[dateStr] || 0);
@@ -351,7 +359,7 @@ function getWeeklyData() {
     if (allDates.length === 0) {
         // If no data at all, show current week with 0
         const currentWeekStart = getWeekStart(new Date());
-        weeklyTotals[currentWeekStart.toISOString().split('T')[0]] = 0;
+        weeklyTotals[getLocalDateString(currentWeekStart)] = 0;
     } else {
         // Find the earliest week with data
         const firstDate = new Date(allDates[0]);
@@ -363,7 +371,7 @@ function getWeeklyData() {
         // Generate all weeks from first week to current week
         const weekStart = new Date(firstWeekStart);
         while (weekStart <= currentWeekStart) {
-            const weekKey = weekStart.toISOString().split('T')[0];
+            const weekKey = getLocalDateString(weekStart);
             weeklyTotals[weekKey] = 0; // Initialize with 0
             
             // Move to next week
@@ -374,7 +382,7 @@ function getWeeklyData() {
         Object.entries(progressData.daily).forEach(([dateStr, count]) => {
             const date = new Date(dateStr);
             const weekStartForDate = getWeekStart(date);
-            const weekKey = weekStartForDate.toISOString().split('T')[0];
+            const weekKey = getLocalDateString(weekStartForDate);
             
             if (weeklyTotals.hasOwnProperty(weekKey)) {
                 weeklyTotals[weekKey] += count;
@@ -429,7 +437,7 @@ function getCumulativeData() {
     // Generate all days from first to today
     const currentDate = new Date(firstDate);
     while (currentDate <= today) {
-        const dateStr = currentDate.toISOString().split('T')[0];
+        const dateStr = getLocalDateString(currentDate);
         
         // Add the questions for this day (0 if no activity)
         cumulative += progressData.daily[dateStr] || 0;

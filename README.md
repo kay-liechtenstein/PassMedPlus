@@ -26,4 +26,9 @@ This works only on Google Chrome, meaning that you cannot use this on Safari, Fi
 
 ## Update Information
 
-Last updated: 18:55 (GMT) 25th Nov 2025.
+Last updated: 02:38 (UTC) 14th Dec 2025.
+
+## Update Logs
+
+- Resolved time-zone issue (14th Dec 2025).
+- Resolved weekly progress glitch (14th Dec 2025).
