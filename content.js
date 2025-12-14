@@ -1,5 +1,14 @@
 // Content script to extract PassMed progress data
 
+// Helper function to get local date string without timezone issues
+// This uses the local date where the user is, which matches what they see on PassMed
+function getLocalDateString(date = new Date()) {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 // Function to inject the sync button at the top of all PassMed pages
 async function injectSyncButton() {
     // Only show on the specific PassMedicine menu pages
@@ -104,7 +113,7 @@ async function injectSyncButton() {
                     
                 if (reviewData.totalQuestions > 0) {
                     // Save data
-                    const today = new Date().toISOString().split('T')[0];
+                    const today = getLocalDateString();
                     const todayCount = reviewData.daily[today] ? reviewData.daily[today].total : 0;
                     
                     await chrome.storage.local.set({ 
@@ -469,7 +478,7 @@ async function updateButtonWithTodayStats(button) {
             return;
         }
         
-        const today = new Date().toISOString().split('T')[0];
+        const today = getLocalDateString();
         
         // First check if we have stored Review Questions data for today
         const storedData = await chrome.storage.local.get(['lastExtractedData', 'lastReviewData', 'todayQuestions', 'todayQuestionsDate']);
@@ -693,7 +702,8 @@ function extractQuestionsFromReviewTable() {
                     
                     if (monthIndex !== -1) {
                         const dateObj = new Date(year, monthIndex, parseInt(day));
-                        const dateKey = dateObj.toISOString().split('T')[0];
+                        // Use local date format to avoid timezone issues
+                        const dateKey = `${year}-${(monthIndex + 1).toString().padStart(2, '0')}-${day.padStart(2, '0')}`;
                         
                         // Check result - could be tick/cross or fraction for multi-part questions
                         const resultCell = cells[2];
@@ -935,7 +945,7 @@ window.addEventListener('load', () => {
             if (reviewData.totalQuestions > 0) {
                 
                 // Store the full review data for button updates
-                const today = new Date().toISOString().split('T')[0];
+                const today = getLocalDateString();
                 const todayCount = reviewData.daily[today] ? reviewData.daily[today].total : 0;
                 
                 chrome.storage.local.set({ 
@@ -961,7 +971,7 @@ window.addEventListener('load', () => {
                         source: 'review_table'
                     },
                     todayQuestions: 0, // Review table doesn't have today's live count
-                    todayQuestionsDate: new Date().toISOString().split('T')[0]
+                    todayQuestionsDate: getLocalDateString()
                 });
                 
                 // Update button immediately
@@ -1046,7 +1056,8 @@ function extractQuestionsFromHTML(doc) {
                     
                     if (monthIndex !== -1) {
                         const dateObj = new Date(year, monthIndex, parseInt(day));
-                        const dateKey = dateObj.toISOString().split('T')[0];
+                        // Use local date format to avoid timezone issues
+                        const dateKey = `${year}-${(monthIndex + 1).toString().padStart(2, '0')}-${day.padStart(2, '0')}`;
                         
                         const resultCell = cells[2];
                         const resultText = resultCell.textContent.trim();
@@ -1162,7 +1173,7 @@ async function autoSyncData() {
     
     if (reviewData && reviewData.totalQuestions > 0) {
         // Store the full review data for button updates
-        const today = new Date().toISOString().split('T')[0];
+        const today = getLocalDateString();
         const todayCount = reviewData.daily[today] ? reviewData.daily[today].total : 0;
         
         chrome.storage.local.set({ 
@@ -1273,7 +1284,7 @@ async function handleAutoDataExtraction() {
                     
                 if (reviewData.totalQuestions > 0) {
                     // Save data
-                    const today = new Date().toISOString().split('T')[0];
+                    const today = getLocalDateString();
                     const todayCount = reviewData.daily[today] ? reviewData.daily[today].total : 0;
                     
                     await chrome.storage.local.set({ 
@@ -1338,7 +1349,7 @@ async function handleAutoDataExtraction() {
         setTimeout(async () => {
             const reviewData = extractQuestionsFromReviewTable();
             if (reviewData.totalQuestions > 0) {
-                const today = new Date().toISOString().split('T')[0];
+                const today = getLocalDateString();
                 const todayCount = reviewData.daily[today] ? reviewData.daily[today].total : 0;
                 
                 await chrome.storage.local.set({ 
