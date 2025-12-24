@@ -370,7 +370,12 @@ function getWeeklyData() {
         
         // Generate all weeks from first week to current week
         const weekStart = new Date(firstWeekStart);
-        while (weekStart <= currentWeekStart) {
+        // Reset time to start of day for proper comparison
+        weekStart.setHours(0, 0, 0, 0);
+        const currentWeekStartDate = new Date(currentWeekStart);
+        currentWeekStartDate.setHours(0, 0, 0, 0);
+        
+        while (weekStart <= currentWeekStartDate) {
             const weekKey = getLocalDateString(weekStart);
             weeklyTotals[weekKey] = 0; // Initialize with 0
             
@@ -392,12 +397,13 @@ function getWeeklyData() {
     
     // Sort and prepare data
     const weeks = Object.keys(weeklyTotals).sort();
+    
     const labels = weeks.map(week => {
         const date = new Date(week);
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     });
     
-    return {
+    const weeklyData = {
         labels: labels,
         datasets: [{
             label: 'Questions per Week',
@@ -407,6 +413,8 @@ function getWeeklyData() {
             tension: 0.1
         }]
     };
+    
+    return weeklyData;
 }
 
 // Get cumulative data for chart

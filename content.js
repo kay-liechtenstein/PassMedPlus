@@ -126,6 +126,15 @@ async function injectSyncButton() {
                     // Sync data
                     await autoSyncData();
                     
+                    // Update the floating button with new count
+                    const floatingButton = document.getElementById('passmed-tracker-button');
+                    if (floatingButton) {
+                        const buttonElement = floatingButton.querySelector('button');
+                        if (buttonElement) {
+                            await updateButtonWithTodayStats(buttonElement);
+                        }
+                    }
+                    
                     // Show success notification with strong gradient
                     const notification = document.createElement('div');
                     notification.style.cssText = `
@@ -1296,6 +1305,15 @@ async function handleAutoDataExtraction() {
                     
                     // Sync data
                     await autoSyncData();
+                    
+                    // Update the floating button with new count
+                    const floatingButton = document.getElementById('passmed-tracker-button');
+                    if (floatingButton) {
+                        const buttonElement = floatingButton.querySelector('button');
+                        if (buttonElement) {
+                            await updateButtonWithTodayStats(buttonElement);
+                        }
+                    }
                     
                     // Show success notification with strong gradient
                     const notification = document.createElement('div');
