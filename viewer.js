@@ -65,8 +65,18 @@ function updateStats() {
     const dates = Object.keys(progressData.daily).sort();
     const totalQuestions = Object.values(progressData.daily).reduce((sum, count) => sum + count, 0);
     const daysActive = dates.length;
-    const avgPerDay = daysActive > 0 ? (totalQuestions / daysActive).toFixed(1) : '0';
-    
+
+    // Calculate total days from first record to today (including inactive days)
+    let avgPerDay = '0';
+    if (dates.length > 0) {
+        const firstDate = new Date(dates[0]);
+        const todayDate = new Date();
+        todayDate.setHours(0, 0, 0, 0);
+        firstDate.setHours(0, 0, 0, 0);
+        const totalDays = Math.floor((todayDate - firstDate) / (1000 * 60 * 60 * 24)) + 1;
+        avgPerDay = (totalQuestions / totalDays).toFixed(1);
+    }
+
     // Get today's questions
     const today = getLocalDateString();
     const todayQuestions = progressData.daily[today] || 0;
@@ -142,10 +152,45 @@ function initCharts() {
     dailyData.datasets[0].borderWidth = 0;
     dailyData.datasets[0].borderRadius = 0;
     dailyData.datasets[0].borderSkipped = false;
-    
+
+    // Plugin to draw average line across full width
+    const dailyAveragePlugin = {
+        id: 'dailyAverageLine',
+        beforeDraw: (chart) => {
+            const avg = chart.data.dailyAverage;
+            if (avg === undefined || avg === 0) return;
+
+            const ctx = chart.ctx;
+            const yScale = chart.scales.y;
+            const chartArea = chart.chartArea;
+            const yPos = yScale.getPixelForValue(avg);
+
+            // Draw gradient fill from line to bottom
+            const gradient = ctx.createLinearGradient(0, yPos, 0, chartArea.bottom);
+            gradient.addColorStop(0, 'rgba(220, 20, 60, 0.25)');
+            gradient.addColorStop(0.5, 'rgba(220, 20, 60, 0.12)');
+            gradient.addColorStop(1, 'rgba(220, 20, 60, 0.02)');
+
+            ctx.save();
+            ctx.fillStyle = gradient;
+            ctx.fillRect(chartArea.left, yPos, chartArea.right - chartArea.left, chartArea.bottom - yPos);
+
+            // Draw the line
+            ctx.strokeStyle = '#DC143C';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(chartArea.left, yPos);
+            ctx.lineTo(chartArea.right, yPos);
+            ctx.stroke();
+            ctx.restore();
+        }
+    };
+
     charts.daily = new Chart(dailyCtx, {
         type: 'bar',
         data: dailyData,
+        plugins: [dailyAveragePlugin],
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -173,12 +218,30 @@ function initCharts() {
             },
             plugins: {
                 legend: {
-                    display: false
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15,
+                        generateLabels: (chart) => {
+                            const original = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                            original.push({
+                                text: 'Daily Average',
+                                fillStyle: 'rgba(220, 20, 60, 0.25)',
+                                strokeStyle: '#DC143C',
+                                lineWidth: 2,
+                                lineDash: [5, 5],
+                                hidden: false,
+                                index: 1
+                            });
+                            return original;
+                        }
+                    }
                 }
             }
         }
     });
-    
+
     // Weekly progress chart
     const weeklyCanvas = document.getElementById('weeklyChart');
     if (!weeklyCanvas) {
@@ -210,10 +273,45 @@ function initCharts() {
     weeklyData.datasets[0].pointBorderWidth = 3;
     weeklyData.datasets[0].pointRadius = 6;
     weeklyData.datasets[0].pointHoverRadius = 8;
-    
+
+    // Plugin to draw weekly average line across full width
+    const weeklyAveragePlugin = {
+        id: 'weeklyAverageLine',
+        beforeDraw: (chart) => {
+            const avg = chart.data.weeklyAverage;
+            if (avg === undefined || avg === 0) return;
+
+            const ctx = chart.ctx;
+            const yScale = chart.scales.y;
+            const chartArea = chart.chartArea;
+            const yPos = yScale.getPixelForValue(avg);
+
+            // Draw gradient fill from line to bottom
+            const gradient = ctx.createLinearGradient(0, yPos, 0, chartArea.bottom);
+            gradient.addColorStop(0, 'rgba(220, 20, 60, 0.25)');
+            gradient.addColorStop(0.5, 'rgba(220, 20, 60, 0.12)');
+            gradient.addColorStop(1, 'rgba(220, 20, 60, 0.02)');
+
+            ctx.save();
+            ctx.fillStyle = gradient;
+            ctx.fillRect(chartArea.left, yPos, chartArea.right - chartArea.left, chartArea.bottom - yPos);
+
+            // Draw the line
+            ctx.strokeStyle = '#DC143C';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(chartArea.left, yPos);
+            ctx.lineTo(chartArea.right, yPos);
+            ctx.stroke();
+            ctx.restore();
+        }
+    };
+
     charts.weekly = new Chart(weeklyCtx, {
         type: 'line',
         data: weeklyData,
+        plugins: [weeklyAveragePlugin],
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -228,10 +326,33 @@ function initCharts() {
                         text: 'Questions per Week'
                     }
                 }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15,
+                        generateLabels: (chart) => {
+                            const original = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                            original.push({
+                                text: 'Weekly Average',
+                                fillStyle: 'rgba(220, 20, 60, 0.25)',
+                                strokeStyle: '#DC143C',
+                                lineWidth: 2,
+                                lineDash: [5, 5],
+                                hidden: false,
+                                index: 1
+                            });
+                            return original;
+                        }
+                    }
+                }
             }
         }
     });
-    
+
     // Cumulative progress chart
     const cumulativeCanvas = document.getElementById('cumulativeChart');
     if (!cumulativeCanvas) {
@@ -291,21 +412,23 @@ function initCharts() {
 function getDailyData(days) {
     const dates = [];
     const values = [];
-    
+
     if (days === 'all') {
         // Show all days from first activity to today (including days with 0 questions)
         const allDates = Object.keys(progressData.daily).sort();
         if (allDates.length > 0) {
-            const firstDate = new Date(allDates[0]);
+            // Parse as LOCAL date to avoid timezone issues
+            const firstDate = parseLocalDate(allDates[0]);
             const today = new Date();
-            
+            today.setHours(23, 59, 59, 999); // End of today to ensure today is included
+
             // Generate all days from first to today
             const currentDate = new Date(firstDate);
             while (currentDate <= today) {
                 const dateStr = getLocalDateString(currentDate);
                 dates.push(currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
                 values.push(progressData.daily[dateStr] || 0); // Include 0 for days with no activity
-                
+
                 // Move to next day
                 currentDate.setDate(currentDate.getDate() + 1);
             }
@@ -314,11 +437,12 @@ function getDailyData(days) {
         // Show last N days of actual data
         const allDates = Object.keys(progressData.daily).sort();
         const recentDates = allDates.slice(-days);
-        
+
         // If we have less data than requested days, show all
         if (recentDates.length < days && allDates.length > 0) {
             allDates.forEach(dateStr => {
-                const date = new Date(dateStr);
+                // Parse as LOCAL date to avoid timezone issues
+                const date = parseLocalDate(dateStr);
                 dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
                 values.push(progressData.daily[dateStr]);
             });
@@ -336,59 +460,76 @@ function getDailyData(days) {
         }
     }
     
-    
+    // Calculate daily average (total questions / total days from first record to today)
+    const allDates = Object.keys(progressData.daily).sort();
+    let dailyAverage = 0;
+    if (allDates.length > 0) {
+        const totalQuestions = Object.values(progressData.daily).reduce((sum, count) => sum + count, 0);
+        const firstDate = new Date(allDates[0]);
+        const todayDate = new Date();
+        todayDate.setHours(0, 0, 0, 0);
+        firstDate.setHours(0, 0, 0, 0);
+        const totalDays = Math.floor((todayDate - firstDate) / (1000 * 60 * 60 * 24)) + 1;
+        dailyAverage = totalQuestions / totalDays;
+    }
+
     return {
         labels: dates,
-        datasets: [{
-            label: 'Questions Completed',
-            data: values,
-            backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color') || '#0ABAB5',
-            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-dark') || '#089A96',
-            borderWidth: 1
-        }]
+        datasets: [
+            {
+                label: 'Questions Completed',
+                data: values,
+                backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color') || '#0ABAB5',
+                borderColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-dark') || '#089A96',
+                borderWidth: 1,
+                type: 'bar'
+            }
+        ],
+        dailyAverage: dailyAverage
     };
 }
 
 // Get weekly data for chart
 function getWeeklyData() {
     const weeklyTotals = {};
-    
+
     // Get all dates from daily data
     const allDates = Object.keys(progressData.daily).sort();
-    
+
     if (allDates.length === 0) {
         // If no data at all, show current week with 0
         const currentWeekStart = getWeekStart(new Date());
         weeklyTotals[getLocalDateString(currentWeekStart)] = 0;
     } else {
-        // Find the earliest week with data
-        const firstDate = new Date(allDates[0]);
+        // Find the earliest week with data - parse as LOCAL date
+        const firstDate = parseLocalDate(allDates[0]);
         const firstWeekStart = getWeekStart(firstDate);
-        
+
         // Get current week
         const currentWeekStart = getWeekStart(new Date());
-        
+
         // Generate all weeks from first week to current week
         const weekStart = new Date(firstWeekStart);
         // Reset time to start of day for proper comparison
         weekStart.setHours(0, 0, 0, 0);
         const currentWeekStartDate = new Date(currentWeekStart);
-        currentWeekStartDate.setHours(0, 0, 0, 0);
-        
+        currentWeekStartDate.setHours(23, 59, 59, 999); // End of day to ensure current week is included
+
         while (weekStart <= currentWeekStartDate) {
             const weekKey = getLocalDateString(weekStart);
             weeklyTotals[weekKey] = 0; // Initialize with 0
-            
+
             // Move to next week
             weekStart.setDate(weekStart.getDate() + 7);
         }
-        
+
         // Now populate with actual data
         Object.entries(progressData.daily).forEach(([dateStr, count]) => {
-            const date = new Date(dateStr);
+            // Parse as LOCAL date to avoid timezone issues
+            const date = parseLocalDate(dateStr);
             const weekStartForDate = getWeekStart(date);
             const weekKey = getLocalDateString(weekStartForDate);
-            
+
             if (weeklyTotals.hasOwnProperty(weekKey)) {
                 weeklyTotals[weekKey] += count;
             }
@@ -397,30 +538,46 @@ function getWeeklyData() {
     
     // Sort and prepare data
     const weeks = Object.keys(weeklyTotals).sort();
-    
+
     const labels = weeks.map(week => {
-        const date = new Date(week);
+        // Parse as LOCAL date to avoid timezone issues
+        const date = parseLocalDate(week);
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     });
     
+    // Calculate average of weekly totals
+    const weeklyValues = weeks.map(week => weeklyTotals[week]);
+    const weeklyAverage = weeklyValues.length > 0
+        ? weeklyValues.reduce((sum, val) => sum + val, 0) / weeklyValues.length
+        : 0;
+
     const weeklyData = {
         labels: labels,
-        datasets: [{
-            label: 'Questions per Week',
-            data: weeks.map(week => weeklyTotals[week]),
-            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color') || '#0ABAB5',
-            backgroundColor: (getComputedStyle(document.documentElement).getPropertyValue('--primary-color') || '#0ABAB5') + '1A',
-            tension: 0.1
-        }]
+        datasets: [
+            {
+                label: 'Questions per Week',
+                data: weeklyValues,
+                borderColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color') || '#0ABAB5',
+                backgroundColor: (getComputedStyle(document.documentElement).getPropertyValue('--primary-color') || '#0ABAB5') + '1A',
+                tension: 0.1
+            }
+        ],
+        weeklyAverage: weeklyAverage
     };
-    
+
     return weeklyData;
+}
+
+// Helper function to parse YYYY-MM-DD string as local date (not UTC)
+function parseLocalDate(dateStr) {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
 }
 
 // Get cumulative data for chart
 function getCumulativeData() {
     const allDates = Object.keys(progressData.daily).sort();
-    
+
     if (allDates.length === 0) {
         return {
             labels: [],
@@ -433,31 +590,32 @@ function getCumulativeData() {
             }]
         };
     }
-    
+
     let cumulative = 0;
     const cumulativeData = [];
     const labels = [];
-    
-    // Get first and last dates
-    const firstDate = new Date(allDates[0]);
+
+    // Get first and last dates - parse as LOCAL dates to avoid timezone issues
+    const firstDate = parseLocalDate(allDates[0]);
     const today = new Date();
-    
+    today.setHours(23, 59, 59, 999); // End of today to ensure today is included
+
     // Generate all days from first to today
     const currentDate = new Date(firstDate);
     while (currentDate <= today) {
         const dateStr = getLocalDateString(currentDate);
-        
+
         // Add the questions for this day (0 if no activity)
         cumulative += progressData.daily[dateStr] || 0;
         cumulativeData.push(cumulative);
-        
+
         // Add label for this day
         labels.push(currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-        
+
         // Move to next day
         currentDate.setDate(currentDate.getDate() + 1);
     }
-    
+
     return {
         labels: labels,
         datasets: [{
@@ -524,7 +682,7 @@ document.querySelectorAll('.time-range button').forEach(button => {
             newData.datasets[0].borderWidth = 0;
             newData.datasets[0].borderRadius = 0;
             newData.datasets[0].borderSkipped = false;
-            
+
             charts.daily.data = newData;
             charts.daily.update();
         }

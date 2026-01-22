@@ -145,10 +145,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const today = new Date().toISOString().split('T')[0];
             const todayQuestions = (localData.todayQuestionsDate === today) ? localData.todayQuestions : 0;
             
-            const totalDays = Object.keys(data.daily).length;
+            const activeDays = Object.keys(data.daily).length;
             const totalQuestions = Object.values(data.daily).reduce((sum, count) => sum + count, 0);
-            
-            if (totalDays > 0) {
+
+            // Calculate total days from first record to today (including inactive days)
+            const dates = Object.keys(data.daily).sort();
+            const firstDate = new Date(dates[0]);
+            const todayDate = new Date();
+            todayDate.setHours(0, 0, 0, 0);
+            firstDate.setHours(0, 0, 0, 0);
+            const totalDays = Math.floor((todayDate - firstDate) / (1000 * 60 * 60 * 24)) + 1;
+
+            if (activeDays > 0) {
                 // Get recent entries
                 const recentEntries = Object.entries(data.daily)
                     .sort((a, b) => new Date(b[0]) - new Date(a[0]))
@@ -163,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         ` : ''}
                         <div class="stat-item">
-                            <div class="stat-value">${totalDays}</div>
+                            <div class="stat-value">${activeDays}</div>
                             <div class="stat-label">Active Days</div>
                         </div>
                         <div class="stat-item">
@@ -196,15 +204,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (data.lastSync) {
                     const syncDate = new Date(data.lastSync);
-                    const dateStr = syncDate.toLocaleDateString('en-US', { 
-                        month: 'short', 
+                    const dateStr = syncDate.toLocaleDateString('en-US', {
+                        month: 'short',
                         day: 'numeric',
                         year: 'numeric'
                     });
-                    const timeStr = syncDate.toLocaleTimeString('en-US', {
-                        hour: 'numeric',
+                    const timeStr = syncDate.toLocaleTimeString('en-GB', {
+                        hour: '2-digit',
                         minute: '2-digit',
-                        hour12: true
+                        hour12: false
                     });
                     html += `<div class="last-sync">Last updated: ${dateStr} at ${timeStr}</div>`;
                 }
