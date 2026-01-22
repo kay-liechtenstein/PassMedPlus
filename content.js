@@ -528,31 +528,7 @@ async function updateButtonWithTodayStats(button) {
             return;
         }
         
-        // If on review questions page, extract fresh data
-        if (isOnReviewQuestionsPage()) {
-            const reviewData = extractQuestionsFromReviewTable();
-            if (reviewData.totalQuestions > 0 && reviewData.daily[today]) {
-                const todayCount = reviewData.daily[today].total;
-                button.innerHTML = `
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;">
-                    <line x1="12" y1="20" x2="12" y2="10"></line>
-                    <line x1="18" y1="20" x2="18" y2="4"></line>
-                    <line x1="6" y1="20" x2="6" y2="16"></line>
-                </svg>
-                <span style="vertical-align: middle;">Progress Tracker</span>
-                <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-left: 8px;">${todayCount} today</span>
-            `;
-                
-                // Store this data for future use
-                chrome.storage.local.set({ 
-                    lastReviewData: reviewData,
-                    lastReviewDataDate: new Date().toISOString(),
-                    todayQuestions: todayCount,
-                    todayQuestionsDate: today
-                });
-                return;
-            }
-        }
+        // Removed auto-extraction on Review Questions page - user must press Sync button
         
         // Fall back to any stored data
         const localData = await chrome.storage.local.get(['todayQuestions', 'todayQuestionsDate']);
@@ -943,63 +919,21 @@ document.addEventListener('keydown', async (e) => {
     }
 });
 
-// Auto-extract when page loads (optional)
+// Auto-extract when page loads - only updates local cache, does NOT sync to storage
+// User must press Sync button to actually sync data
 window.addEventListener('load', () => {
     // Wait a bit for dynamic content to load
     setTimeout(async () => {
-        // First, check if we're on review questions page
-        if (isOnReviewQuestionsPage()) {
-            const reviewData = extractQuestionsFromReviewTable();
-            
-            if (reviewData.totalQuestions > 0) {
-                
-                // Store the full review data for button updates
-                const today = getLocalDateString();
-                const todayCount = reviewData.daily[today] ? reviewData.daily[today].total : 0;
-                
-                chrome.storage.local.set({ 
-                    lastReviewData: reviewData,
-                    lastReviewDataDate: new Date().toISOString(),
-                    todayQuestions: todayCount,
-                    todayQuestionsDate: today
-                });
-                
-                // Convert review data format to match storage format
-                const dailyData = {};
-                for (const [date, stats] of Object.entries(reviewData.daily)) {
-                    dailyData[date] = stats.total;
-                }
-                
-                chrome.storage.local.set({ 
-                    lastExtractedData: {
-                        daily: dailyData,
-                        totalQuestions: reviewData.totalQuestions,
-                        correctQuestions: reviewData.correctQuestions,
-                        incorrectQuestions: reviewData.incorrectQuestions,
-                        extractedAt: new Date().toISOString(),
-                        source: 'review_table'
-                    },
-                    todayQuestions: 0, // Review table doesn't have today's live count
-                    todayQuestionsDate: getLocalDateString()
-                });
-                
-                // Update button immediately
-                const button = document.querySelector('#passmed-tracker-button button');
-                if (button) {
-                    updateButtonWithTodayStats(button);
-                }
-            }
-        } else {
-            // Not on review questions page - try to use stored data or fetch in background
+        // Not on review questions page - try to use stored data for UI display only
+        if (!isOnReviewQuestionsPage()) {
             const storedData = await chrome.storage.local.get(['lastReviewData']);
             if (storedData.lastReviewData) {
-                
                 const dailyData = {};
                 for (const [date, stats] of Object.entries(storedData.lastReviewData.daily)) {
                     dailyData[date] = stats.total;
                 }
-                
-                chrome.storage.local.set({ 
+
+                chrome.storage.local.set({
                     lastExtractedData: {
                         daily: dailyData,
                         totalQuestions: storedData.lastReviewData.totalQuestions,
@@ -1009,10 +943,9 @@ window.addEventListener('load', () => {
                         source: 'review_table_stored'
                     }
                 });
-                
-            } else {
             }
         }
+        // Removed auto-extraction on Review Questions page - user must press Sync button
     }, 2000);
     
     // Also check if button needs color update after load
@@ -1362,32 +1295,8 @@ async function handleAutoDataExtraction() {
                 }
             }, 1000);
         }, 2000);
-    } else if (isOnReviewQuestionsPage()) {
-        // If we're on Review Questions page without sync flag, just extract data for auto-sync
-        setTimeout(async () => {
-            const reviewData = extractQuestionsFromReviewTable();
-            if (reviewData.totalQuestions > 0) {
-                const today = getLocalDateString();
-                const todayCount = reviewData.daily[today] ? reviewData.daily[today].total : 0;
-                
-                await chrome.storage.local.set({ 
-                    lastReviewData: reviewData,
-                    lastReviewDataDate: new Date().toISOString(),
-                    todayQuestions: todayCount,
-                    todayQuestionsDate: today
-                });
-                
-                // Update button if it exists
-                const button = document.querySelector('#passmed-tracker-button button');
-                if (button) {
-                    await updateButtonWithTodayStats(button);
-                }
-                
-                // Auto sync
-                await autoSyncData();
-            }
-        }, 1000);
     }
+    // Removed auto-sync on Review Questions page - user must press Sync button
 }
 
 // Always call handleAutoDataExtraction when page loads
@@ -1395,26 +1304,21 @@ async function handleAutoDataExtraction() {
 if (document.readyState === 'complete') {
     setTimeout(async () => {
         await handleAutoDataExtraction();
-        if (isOnReviewQuestionsPage()) {
-            autoSyncData();
-        }
+        // Removed auto-sync - user must press Sync button
     }, 2000);
 } else {
     window.addEventListener('load', () => {
         setTimeout(async () => {
             await handleAutoDataExtraction();
-            
-            // Auto sync periodically
-            if (isOnReviewQuestionsPage()) {
-                autoSyncData();
-            }
-            
+
+            // Removed auto-sync - user must press Sync button
+
             // Update button with stored review data if available
             const button = document.querySelector('#passmed-tracker-button button');
             if (button) {
                 updateButtonWithTodayStats(button);
             }
-            
+
             // Also inject both buttons
             injectTrackerButton();
             injectSyncButton();
@@ -1422,21 +1326,18 @@ if (document.readyState === 'complete') {
     });
 }
 
-// Also try to detect AJAX updates
+// Also try to detect AJAX updates - but only for UI updates, not auto-sync
 const observer = new MutationObserver((mutations) => {
     // Debounce to avoid too many extractions
     clearTimeout(window.extractTimeout);
     window.extractTimeout = setTimeout(() => {
-        // PRIORITY: Check for review table first, then contribution graph
-        if (isOnReviewQuestionsPage() || document.getElementById('contribution-graph-container')) {
-            // Log navigation changes
-            if (isOnReviewQuestionsPage() && !window.wasOnReviewPage) {
-                window.wasOnReviewPage = true;
-            } else if (!isOnReviewQuestionsPage() && window.wasOnReviewPage) {
-                window.wasOnReviewPage = false;
-            }
-            autoSyncData();
+        // Track page navigation for UI updates only
+        if (isOnReviewQuestionsPage() && !window.wasOnReviewPage) {
+            window.wasOnReviewPage = true;
+        } else if (!isOnReviewQuestionsPage() && window.wasOnReviewPage) {
+            window.wasOnReviewPage = false;
         }
+        // Removed auto-sync - user must press Sync button
     }, 1000);
 });
 
@@ -1451,23 +1352,20 @@ let lastPageType = null;
 setInterval(() => {
     const currentlyOnReview = isOnReviewQuestionsPage();
     const currentPageType = currentlyOnReview ? 'review' : 'other';
-    
+
     if (currentPageType !== lastPageType) {
         if (currentlyOnReview) {
-            // Check if this is part of auto-extraction
+            // Check if this is part of auto-extraction (from Sync button click)
             chrome.storage.local.get(['autoExtractInProgress'], async (data) => {
                 if (data.autoExtractInProgress) {
-                    // This is auto-extraction - handle it
+                    // This is auto-extraction from Sync button - handle it
                     await handleAutoDataExtraction();
-                } else {
-                    // Regular navigation - just sync
-                    setTimeout(() => autoSyncData(), 1000);
                 }
+                // Removed auto-sync on regular navigation - user must press Sync button
             });
-        } else if (lastPageType === 'review') {
         }
         lastPageType = currentPageType;
-        
+
         // Always ensure both buttons are present on any navigation
         injectTrackerButton();
         injectSyncButton();
