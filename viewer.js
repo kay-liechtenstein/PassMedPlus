@@ -762,14 +762,29 @@ function initThemeSelector() {
 function applyTheme(primaryColor, darkColor) {
     document.documentElement.style.setProperty('--primary-color', primaryColor);
     document.documentElement.style.setProperty('--primary-dark', darkColor);
-    
+
     // Convert hex to RGB for box-shadow
     const hex2rgb = (hex) => {
         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result ? 
-            `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : 
+        return result ?
+            `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` :
             '10, 186, 181';
     };
+
+    // Create a lighter version of the primary color for shimmer effect
+    const lightenColor = (hex, percent) => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        if (!result) return hex;
+        let r = parseInt(result[1], 16);
+        let g = parseInt(result[2], 16);
+        let b = parseInt(result[3], 16);
+        r = Math.min(255, Math.round(r + (255 - r) * percent));
+        g = Math.min(255, Math.round(g + (255 - g) * percent));
+        b = Math.min(255, Math.round(b + (255 - b) * percent));
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    };
+
+    document.documentElement.style.setProperty('--shimmer-color', lightenColor(primaryColor, 0.5));
     document.documentElement.style.setProperty('--primary-color-rgb', hex2rgb(primaryColor));
     
     // Check if this is a green theme
@@ -933,3 +948,113 @@ if (document.readyState === 'loading') {
 } else {
     initThemeSelector();
 }
+
+// Golden particles animation
+function createParticles() {
+    const container = document.getElementById('particles');
+    if (!container) return;
+
+    const particleCount = 30;
+
+    for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.animationDuration = (Math.random() * 8 + 12) + 's';
+        particle.style.animationDelay = (Math.random() * 3) + 's';
+        particle.style.width = (Math.random() * 10 + 8) + 'px';
+        particle.style.height = particle.style.width;
+        container.appendChild(particle);
+    }
+}
+
+// Initialize particles
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', createParticles);
+} else {
+    createParticles();
+}
+
+// Morphing Triangles background animation for header
+(function() {
+    function createTriangleAnimation(canvasId) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let dpr = window.devicePixelRatio || 1;
+        let triangles = [];
+
+        function resize() {
+            dpr = window.devicePixelRatio || 1;
+            const rect = canvas.parentElement.getBoundingClientRect();
+            width = rect.width;
+            height = rect.height;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function initTriangles() {
+            triangles = [];
+            const count = Math.max(8, Math.floor((width * height) / 12000));
+            for (let i = 0; i < count; i++) {
+                const cx = Math.random() * width;
+                const cy = Math.random() * height;
+                const size = Math.random() * 35 + 15;
+                triangles.push({
+                    points: [
+                        { x: cx, y: cy - size, vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3 },
+                        { x: cx + size * 0.866, y: cy + size/2, vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3 },
+                        { x: cx - size * 0.866, y: cy + size/2, vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3 }
+                    ],
+                    opacity: Math.random() * 0.15 + 0.03
+                });
+            }
+        }
+
+        function animate() {
+            // Get current theme color
+            const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#0ABAB5';
+
+            ctx.clearRect(0, 0, width, height);
+            ctx.fillStyle = primaryColor;
+            ctx.fillRect(0, 0, width, height);
+
+            triangles.forEach(tri => {
+                tri.points.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    if (p.x < -30 || p.x > width + 30) p.vx *= -1;
+                    if (p.y < -30 || p.y > height + 30) p.vy *= -1;
+                });
+
+                ctx.beginPath();
+                ctx.moveTo(tri.points[0].x, tri.points[0].y);
+                ctx.lineTo(tri.points[1].x, tri.points[1].y);
+                ctx.lineTo(tri.points[2].x, tri.points[2].y);
+                ctx.closePath();
+                ctx.fillStyle = `rgba(255, 255, 255, ${tri.opacity})`;
+                ctx.fill();
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', () => {
+            resize();
+            initTriangles();
+        });
+
+        resize();
+        initTriangles();
+        animate();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => createTriangleAnimation('header-bg'));
+    } else {
+        createTriangleAnimation('header-bg');
+    }
+})();
