@@ -954,16 +954,19 @@ function createParticles() {
     const container = document.getElementById('particles');
     if (!container) return;
 
-    const particleCount = 30;
+    const particleCount = 25;
 
     for (let i = 0; i < particleCount; i++) {
         const particle = document.createElement('div');
         particle.className = 'particle';
         particle.style.left = Math.random() * 100 + '%';
-        particle.style.animationDuration = (Math.random() * 8 + 12) + 's';
-        particle.style.animationDelay = (Math.random() * 3) + 's';
-        particle.style.width = (Math.random() * 10 + 8) + 'px';
-        particle.style.height = particle.style.width;
+        const duration = Math.random() * 10 + 15; // 15-25 seconds
+        particle.style.animationDuration = duration + 's';
+        // Negative delay spreads particles across their animation cycle on load
+        particle.style.animationDelay = -(Math.random() * duration) + 's';
+        const size = Math.random() * 4 + 3; // 3-7px (smaller)
+        particle.style.width = size + 'px';
+        particle.style.height = size + 'px';
         container.appendChild(particle);
     }
 }
