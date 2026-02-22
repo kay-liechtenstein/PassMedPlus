@@ -241,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 applyThemeColor(color);
             } else {
-                dataDiv.innerHTML = '<p>No data stored yet. Visit PassMed and data will sync automatically!</p>';
+                dataDiv.innerHTML = '<p>No data stored yet. Press on Sync button next to me!</p>';
             }
         } catch (error) {
             dataDiv.innerHTML = '<p>Error loading data</p>';
