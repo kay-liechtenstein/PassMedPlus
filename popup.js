@@ -129,6 +129,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 val.style.lineHeight = '1.2';
             }
         });
+
+        // Update footer with gradient (lighter version of theme color)
+        const footer = document.querySelector('.footer');
+        if (footer) {
+            const lightColor = lightenColor(color, 0.3);
+            const midColor = lightenColor(color, 0.2);
+            const darkLightColor = lightenColor(color, 0.1);
+            footer.style.background = `linear-gradient(135deg, ${lightColor} 0%, ${midColor} 50%, ${darkLightColor} 100%)`;
+        }
     }
 
     // Display data from Chrome storage
