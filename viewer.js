@@ -3,6 +3,30 @@ let progressData = { daily: {} };
 let charts = {};
 let currentDailyRange = 7; // Track the current selected range
 
+// Plugin to add year to first displayed tick of each year
+const yearDisplayPlugin = {
+    id: 'yearDisplay',
+    afterBuildTicks: (chart) => {
+        const scale = chart.scales.x;
+        if (!scale || !scale.ticks) return;
+
+        let shownYears = {};
+        scale.ticks.forEach((tick, i) => {
+            const label = tick.label;
+            if (!label || typeof label !== 'string' || !label.includes('|')) return;
+
+            const [year, monthDay] = label.split('|');
+            // First displayed tick OR first tick of a new year
+            if (i === 0 || !shownYears[year]) {
+                tick.label = year + ' ' + monthDay;
+                shownYears[year] = true;
+            } else {
+                tick.label = monthDay;
+            }
+        });
+    }
+};
+
 // Helper function to get local date string without timezone issues
 function getLocalDateString(date = new Date()) {
     const year = date.getFullYear();
@@ -190,7 +214,7 @@ function initCharts() {
     charts.daily = new Chart(dailyCtx, {
         type: 'bar',
         data: dailyData,
-        plugins: [dailyAveragePlugin],
+        plugins: [dailyAveragePlugin, yearDisplayPlugin],
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -235,6 +259,14 @@ function initCharts() {
                                 index: 1
                             });
                             return original;
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: (items) => {
+                            const label = items[0]?.label || '';
+                            return label.includes('|') ? label.replace('|', ' ') : label;
                         }
                     }
                 }
@@ -389,6 +421,7 @@ function initCharts() {
     charts.cumulative = new Chart(cumulativeCtx, {
         type: 'line',
         data: cumulativeData,
+        plugins: [yearDisplayPlugin],
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -401,6 +434,16 @@ function initCharts() {
                     title: {
                         display: true,
                         text: 'Total Questions'
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        title: (items) => {
+                            const label = items[0]?.label || '';
+                            return label.includes('|') ? label.replace('|', ' ') : label;
+                        }
                     }
                 }
             }
@@ -426,10 +469,11 @@ function getDailyData(days) {
             const currentDate = new Date(firstDate);
             while (currentDate <= today) {
                 const dateStr = getLocalDateString(currentDate);
-                dates.push(currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-                values.push(progressData.daily[dateStr] || 0); // Include 0 for days with no activity
-
-                // Move to next day
+                const currentYear = currentDate.getFullYear();
+                const monthDay = currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                // Store as YEAR|MonthDay - plugin will format for display
+                dates.push(`${currentYear}|${monthDay}`);
+                values.push(progressData.daily[dateStr] || 0);
                 currentDate.setDate(currentDate.getDate() + 1);
             }
         }
@@ -440,10 +484,11 @@ function getDailyData(days) {
 
         // If we have less data than requested days, show all
         if (recentDates.length < days && allDates.length > 0) {
-            allDates.forEach(dateStr => {
-                // Parse as LOCAL date to avoid timezone issues
+            allDates.forEach((dateStr) => {
                 const date = parseLocalDate(dateStr);
-                dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                const currentYear = date.getFullYear();
+                const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                dates.push(`${currentYear}|${monthDay}`);
                 values.push(progressData.daily[dateStr]);
             });
         } else {
@@ -453,8 +498,9 @@ function getDailyData(days) {
                 const date = new Date(today);
                 date.setDate(date.getDate() - i);
                 const dateStr = getLocalDateString(date);
-                
-                dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                const currentYear = date.getFullYear();
+                const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                dates.push(`${currentYear}|${monthDay}`);
                 values.push(progressData.daily[dateStr] || 0);
             }
         }
@@ -539,10 +585,18 @@ function getWeeklyData() {
     // Sort and prepare data
     const weeks = Object.keys(weeklyTotals).sort();
 
-    const labels = weeks.map(week => {
+    let lastYear = null;
+    const labels = weeks.map((week) => {
         // Parse as LOCAL date to avoid timezone issues
         const date = parseLocalDate(week);
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const currentYear = date.getFullYear();
+        const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        // Include year on the first label or when year changes
+        if (lastYear === null || currentYear !== lastYear) {
+            lastYear = currentYear;
+            return `${currentYear} ${monthDay}`;
+        }
+        return monthDay;
     });
     
     // Calculate average of weekly totals
@@ -609,8 +663,10 @@ function getCumulativeData() {
         cumulative += progressData.daily[dateStr] || 0;
         cumulativeData.push(cumulative);
 
-        // Add label for this day
-        labels.push(currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+        // Store as YEAR|MonthDay - plugin will format for display
+        const currentYear = currentDate.getFullYear();
+        const monthDay = currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        labels.push(`${currentYear}|${monthDay}`);
 
         // Move to next day
         currentDate.setDate(currentDate.getDate() + 1);
