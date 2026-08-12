@@ -149,9 +149,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const data = response.data || { daily: {} };
             
-            // Also get today's questions from local storage
+            // Also get today's questions from local storage.
+            // Use the local date (not UTC) to match how the content script stamps it.
             const localData = await chrome.storage.local.get(['todayQuestions', 'todayQuestionsDate']);
-            const today = new Date().toISOString().split('T')[0];
+            const now = new Date();
+            const today = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
             const todayQuestions = (localData.todayQuestionsDate === today) ? localData.todayQuestions : 0;
             
             const activeDays = Object.keys(data.daily).length;

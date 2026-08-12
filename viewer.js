@@ -122,11 +122,36 @@ function updateStats() {
         }
     }
     
-    document.getElementById('todayQuestions').textContent = todayQuestions.toLocaleString();
-    document.getElementById('totalQuestions').textContent = totalQuestions.toLocaleString();
-    document.getElementById('daysActive').textContent = daysActive;
-    document.getElementById('avgPerDay').textContent = avgPerDay;
-    document.getElementById('currentStreak').textContent = streak;
+    animateStat('todayQuestions', todayQuestions);
+    animateStat('totalQuestions', totalQuestions);
+    animateStat('daysActive', daysActive);
+    animateStat('avgPerDay', parseFloat(avgPerDay), 1);
+    animateStat('currentStreak', streak);
+    statsAnimatedOnce = true;
+}
+
+// Count-up animation for the stat tiles. Runs only on the first load;
+// the 30-second background refresh sets values directly.
+let statsAnimatedOnce = false;
+const REDUCED_MOTION = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function animateStat(id, target, decimals = 0) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const fmt = v => decimals ? v.toFixed(decimals) : Math.round(v).toLocaleString();
+    if (statsAnimatedOnce || REDUCED_MOTION) {
+        el.textContent = fmt(target);
+        return;
+    }
+    const duration = 900;
+    const start = performance.now();
+    function frame(now) {
+        const t = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = fmt(target * eased);
+        if (t < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
 }
 
 // Update sync status
@@ -161,23 +186,39 @@ function initCharts() {
     
     const dailyCtx = dailyCanvas.getContext('2d');
     const dailyData = getDailyData(currentDailyRange);
-    
-    // Create gradient for bars
-    const gradient = dailyCtx.createLinearGradient(0, 0, 0, 400);
-    const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color') || '#0ABAB5';
-    const darkColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-dark') || '#089A96';
-    
-    gradient.addColorStop(0, primaryColor);
-    gradient.addColorStop(0.5, darkColor);
-    gradient.addColorStop(1, primaryColor + '80'); // 50% opacity
-    
-    // Apply gradient to daily data
-    dailyData.datasets[0].backgroundColor = gradient;
-    dailyData.datasets[0].borderWidth = 0;
-    dailyData.datasets[0].borderRadius = 0;
-    dailyData.datasets[0].borderSkipped = false;
 
-    // Plugin to draw average line across full width
+    const themeColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color') || '#0ABAB5';
+    const primaryColor = chartPrimary(themeColor);
+    const darkColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-dark') || '#089A96';
+
+    // Charts sit on dark glass panels: recessive grid, mono ticks,
+    // dark tooltips edged in the theme colour.
+    const inkDim = 'rgba(233, 241, 241, 0.55)';
+    const gridLine = 'rgba(255, 255, 255, 0.055)';
+    Chart.defaults.color = inkDim;
+    Chart.defaults.font.family = "'IBM Plex Mono', 'SF Mono', 'Menlo', monospace";
+    Chart.defaults.font.size = 10;
+    Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(7, 12, 16, 0.94)';
+    Chart.defaults.plugins.tooltip.borderColor = primaryColor;
+    Chart.defaults.plugins.tooltip.borderWidth = 1;
+    Chart.defaults.plugins.tooltip.cornerRadius = 4;
+    Chart.defaults.plugins.tooltip.padding = 10;
+    Chart.defaults.plugins.tooltip.titleColor = '#E9F1F1';
+    Chart.defaults.plugins.tooltip.bodyColor = inkDim;
+
+    // Bars: bright at the tip, fading towards the baseline
+    const gradient = dailyCtx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, lightenColor(primaryColor, 0.3));
+    gradient.addColorStop(0.55, primaryColor);
+    gradient.addColorStop(1, primaryColor + '30');
+
+    dailyData.datasets[0].backgroundColor = gradient;
+    dailyData.datasets[0].hoverBackgroundColor = lightenColor(primaryColor, 0.45);
+    dailyData.datasets[0].borderWidth = 0;
+    dailyData.datasets[0].borderRadius = 3;
+    dailyData.datasets[0].borderSkipped = 'bottom';
+
+    // Plugin to draw the gold average reference line across full width
     const dailyAveragePlugin = {
         id: 'dailyAverageLine',
         beforeDraw: (chart) => {
@@ -191,18 +232,18 @@ function initCharts() {
 
             // Draw gradient fill from line to bottom
             const gradient = ctx.createLinearGradient(0, yPos, 0, chartArea.bottom);
-            gradient.addColorStop(0, 'rgba(220, 20, 60, 0.25)');
-            gradient.addColorStop(0.5, 'rgba(220, 20, 60, 0.12)');
-            gradient.addColorStop(1, 'rgba(220, 20, 60, 0.02)');
+            gradient.addColorStop(0, 'rgba(212, 175, 55, 0.09)');
+            gradient.addColorStop(0.5, 'rgba(212, 175, 55, 0.035)');
+            gradient.addColorStop(1, 'rgba(212, 175, 55, 0)');
 
             ctx.save();
             ctx.fillStyle = gradient;
             ctx.fillRect(chartArea.left, yPos, chartArea.right - chartArea.left, chartArea.bottom - yPos);
 
             // Draw the line
-            ctx.strokeStyle = '#DC143C';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
+            ctx.strokeStyle = '#D4AF37';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([6, 5]);
             ctx.beginPath();
             ctx.moveTo(chartArea.left, yPos);
             ctx.lineTo(chartArea.right, yPos);
@@ -219,25 +260,31 @@ function initCharts() {
             responsive: true,
             maintainAspectRatio: false,
             animation: {
-                duration: 800
+                duration: 700,
+                easing: 'easeOutQuart',
+                delay: (context) => context.type === 'data' && context.mode === 'default'
+                    ? Math.min(context.dataIndex * 14, 1000)
+                    : 0
             },
             scales: {
                 y: {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'Questions Completed'
+                        text: 'Questions Completed',
+                        font: { family: "'Space Grotesk', sans-serif", size: 11 }
                     },
                     grid: {
                         display: true,
-                        drawBorder: false,
-                        color: 'rgba(0, 0, 0, 0.05)'
-                    }
+                        color: gridLine
+                    },
+                    border: { display: false }
                 },
                 x: {
                     grid: {
                         display: false
-                    }
+                    },
+                    border: { display: false }
                 }
             },
             plugins: {
@@ -251,10 +298,10 @@ function initCharts() {
                             const original = Chart.defaults.plugins.legend.labels.generateLabels(chart);
                             original.push({
                                 text: 'Daily Average',
-                                fillStyle: 'rgba(220, 20, 60, 0.25)',
-                                strokeStyle: '#DC143C',
-                                lineWidth: 2,
-                                lineDash: [5, 5],
+                                fillStyle: 'rgba(212, 175, 55, 0.2)',
+                                strokeStyle: '#D4AF37',
+                                lineWidth: 1.5,
+                                lineDash: [6, 5],
                                 hidden: false,
                                 index: 1
                             });
@@ -285,28 +332,23 @@ function initCharts() {
     
     // Create gradient for weekly chart background
     const weeklyGradient = weeklyCtx.createLinearGradient(0, 0, 0, 400);
-    weeklyGradient.addColorStop(0, primaryColor + '60');
-    weeklyGradient.addColorStop(0.5, primaryColor + '30');
-    weeklyGradient.addColorStop(1, primaryColor + '05');
-    
-    // Create gradient for the line itself - more dramatic
-    const weeklyLineGradient = weeklyCtx.createLinearGradient(0, 0, weeklyCanvas.width, 0);
-    weeklyLineGradient.addColorStop(0, primaryColor);
-    weeklyLineGradient.addColorStop(0.25, darkColor);
-    weeklyLineGradient.addColorStop(0.5, lightenColor(primaryColor, 0.3));
-    weeklyLineGradient.addColorStop(0.75, darkColor);
-    weeklyLineGradient.addColorStop(1, primaryColor);
-    
-    weeklyData.datasets[0].backgroundColor = weeklyGradient;
-    weeklyData.datasets[0].borderColor = weeklyLineGradient;
-    weeklyData.datasets[0].borderWidth = 4;
-    weeklyData.datasets[0].pointBackgroundColor = primaryColor;
-    weeklyData.datasets[0].pointBorderColor = '#fff';
-    weeklyData.datasets[0].pointBorderWidth = 3;
-    weeklyData.datasets[0].pointRadius = 6;
-    weeklyData.datasets[0].pointHoverRadius = 8;
+    weeklyGradient.addColorStop(0, primaryColor + '40');
+    weeklyGradient.addColorStop(0.5, primaryColor + '18');
+    weeklyGradient.addColorStop(1, primaryColor + '03');
 
-    // Plugin to draw weekly average line across full width
+    // Thin luminous line with hollow points on the dark panel
+    weeklyData.datasets[0].backgroundColor = weeklyGradient;
+    weeklyData.datasets[0].borderColor = lightenColor(primaryColor, 0.15);
+    weeklyData.datasets[0].borderWidth = 2.5;
+    weeklyData.datasets[0].pointBackgroundColor = '#0B1216';
+    weeklyData.datasets[0].pointBorderColor = lightenColor(primaryColor, 0.2);
+    weeklyData.datasets[0].pointBorderWidth = 2;
+    weeklyData.datasets[0].pointRadius = 4;
+    weeklyData.datasets[0].pointHoverRadius = 6;
+    weeklyData.datasets[0].pointHoverBackgroundColor = primaryColor;
+    weeklyData.datasets[0].pointHoverBorderColor = '#fff';
+
+    // Plugin to draw the gold weekly average reference line
     const weeklyAveragePlugin = {
         id: 'weeklyAverageLine',
         beforeDraw: (chart) => {
@@ -320,18 +362,18 @@ function initCharts() {
 
             // Draw gradient fill from line to bottom
             const gradient = ctx.createLinearGradient(0, yPos, 0, chartArea.bottom);
-            gradient.addColorStop(0, 'rgba(220, 20, 60, 0.25)');
-            gradient.addColorStop(0.5, 'rgba(220, 20, 60, 0.12)');
-            gradient.addColorStop(1, 'rgba(220, 20, 60, 0.02)');
+            gradient.addColorStop(0, 'rgba(212, 175, 55, 0.09)');
+            gradient.addColorStop(0.5, 'rgba(212, 175, 55, 0.035)');
+            gradient.addColorStop(1, 'rgba(212, 175, 55, 0)');
 
             ctx.save();
             ctx.fillStyle = gradient;
             ctx.fillRect(chartArea.left, yPos, chartArea.right - chartArea.left, chartArea.bottom - yPos);
 
             // Draw the line
-            ctx.strokeStyle = '#DC143C';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
+            ctx.strokeStyle = '#D4AF37';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([6, 5]);
             ctx.beginPath();
             ctx.moveTo(chartArea.left, yPos);
             ctx.lineTo(chartArea.right, yPos);
@@ -348,15 +390,23 @@ function initCharts() {
             responsive: true,
             maintainAspectRatio: false,
             animation: {
-                duration: 800
+                duration: 1100,
+                easing: 'easeOutQuart'
             },
             scales: {
                 y: {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'Questions per Week'
-                    }
+                        text: 'Questions per Week',
+                        font: { family: "'Space Grotesk', sans-serif", size: 11 }
+                    },
+                    grid: { color: gridLine },
+                    border: { display: false }
+                },
+                x: {
+                    grid: { display: false },
+                    border: { display: false }
                 }
             },
             plugins: {
@@ -370,10 +420,10 @@ function initCharts() {
                             const original = Chart.defaults.plugins.legend.labels.generateLabels(chart);
                             original.push({
                                 text: 'Weekly Average',
-                                fillStyle: 'rgba(220, 20, 60, 0.25)',
-                                strokeStyle: '#DC143C',
-                                lineWidth: 2,
-                                lineDash: [5, 5],
+                                fillStyle: 'rgba(212, 175, 55, 0.2)',
+                                strokeStyle: '#D4AF37',
+                                lineWidth: 1.5,
+                                lineDash: [6, 5],
                                 hidden: false,
                                 index: 1
                             });
@@ -396,27 +446,23 @@ function initCharts() {
     
     // Create gradient for cumulative chart background
     const cumulativeGradient = cumulativeCtx.createLinearGradient(0, 0, 0, 400);
-    cumulativeGradient.addColorStop(0, primaryColor + '60');
-    cumulativeGradient.addColorStop(0.5, primaryColor + '30');
-    cumulativeGradient.addColorStop(1, primaryColor + '05');
-    
-    // Create gradient for the line itself - very dramatic with contrasting colors
-    const cumulativeLineGradient = cumulativeCtx.createLinearGradient(0, 0, cumulativeCanvas.width, 0);
-    cumulativeLineGradient.addColorStop(0, darkColor);
-    cumulativeLineGradient.addColorStop(0.2, lightenColor(primaryColor, 0.4));
-    cumulativeLineGradient.addColorStop(0.4, darkColor);
-    cumulativeLineGradient.addColorStop(0.6, primaryColor);
-    cumulativeLineGradient.addColorStop(0.8, darkenColor(primaryColor, 0.4));
-    cumulativeLineGradient.addColorStop(1, lightenColor(primaryColor, 0.3));
-    
+    cumulativeGradient.addColorStop(0, primaryColor + '3A');
+    cumulativeGradient.addColorStop(0.5, primaryColor + '16');
+    cumulativeGradient.addColorStop(1, primaryColor + '03');
+
     cumulativeData.datasets[0].backgroundColor = cumulativeGradient;
-    cumulativeData.datasets[0].borderColor = cumulativeLineGradient;
-    cumulativeData.datasets[0].borderWidth = 4;
+    cumulativeData.datasets[0].borderColor = lightenColor(primaryColor, 0.2);
+    cumulativeData.datasets[0].borderWidth = 2.5;
+    // With one point per day, full-size white-rimmed dots merge into a
+    // scalloped caterpillar. Keep small rimless dots along the line and
+    // emphasise only the latest value.
+    const lastIndex = cumulativeData.datasets[0].data.length - 1;
     cumulativeData.datasets[0].pointBackgroundColor = primaryColor;
     cumulativeData.datasets[0].pointBorderColor = '#fff';
-    cumulativeData.datasets[0].pointBorderWidth = 3;
-    cumulativeData.datasets[0].pointRadius = 6;
-    cumulativeData.datasets[0].pointHoverRadius = 8;
+    cumulativeData.datasets[0].pointBorderWidth = (ctx) => ctx.dataIndex === lastIndex ? 2 : 0;
+    cumulativeData.datasets[0].pointRadius = (ctx) => ctx.dataIndex === lastIndex ? 5 : 3;
+    cumulativeData.datasets[0].pointHoverRadius = 6;
+    cumulativeData.datasets[0].pointHitRadius = 8;
     
     charts.cumulative = new Chart(cumulativeCtx, {
         type: 'line',
@@ -426,18 +472,27 @@ function initCharts() {
             responsive: true,
             maintainAspectRatio: false,
             animation: {
-                duration: 800
+                duration: 1100,
+                easing: 'easeOutQuart'
             },
             scales: {
                 y: {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'Total Questions'
-                    }
+                        text: 'Total Questions',
+                        font: { family: "'Space Grotesk', sans-serif", size: 11 }
+                    },
+                    grid: { color: gridLine },
+                    border: { display: false }
+                },
+                x: {
+                    grid: { display: false },
+                    border: { display: false }
                 }
             },
             plugins: {
+                legend: { display: false },
                 tooltip: {
                     callbacks: {
                         title: (items) => {
@@ -727,17 +782,17 @@ document.querySelectorAll('.time-range button').forEach(button => {
             // Reapply gradient with current theme colors
             const ctx = charts.daily.ctx;
             const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-            const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color') || '#0ABAB5';
-            const darkColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-dark') || '#089A96';
-            
-            gradient.addColorStop(0, primaryColor);
-            gradient.addColorStop(0.5, darkColor);
-            gradient.addColorStop(1, primaryColor + '80');
-            
+            const primaryColor = chartPrimary(getComputedStyle(document.documentElement).getPropertyValue('--primary-color') || '#0ABAB5');
+
+            gradient.addColorStop(0, lightenColor(primaryColor, 0.3));
+            gradient.addColorStop(0.55, primaryColor);
+            gradient.addColorStop(1, primaryColor + '30');
+
             newData.datasets[0].backgroundColor = gradient;
+            newData.datasets[0].hoverBackgroundColor = lightenColor(primaryColor, 0.45);
             newData.datasets[0].borderWidth = 0;
-            newData.datasets[0].borderRadius = 0;
-            newData.datasets[0].borderSkipped = false;
+            newData.datasets[0].borderRadius = 3;
+            newData.datasets[0].borderSkipped = 'bottom';
 
             charts.daily.data = newData;
             charts.daily.update();
@@ -814,10 +869,35 @@ function initThemeSelector() {
     // Theme is already loaded in initDashboard
 }
 
+// Redraw the "P+" tab favicon in the current theme colours: serif monogram
+// with a thin gold keyline frame. Mid-tone golds are invisible against
+// mid-tone theme colours, so the plus needs lightness contrast: deep ink on
+// light/medium themes, pale gold on dark themes.
+function updateFavicon(primaryColor, darkColor) {
+    const link = document.getElementById('pmplus-favicon');
+    if (!link) return;
+    const rgb = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(primaryColor.trim());
+    const luminance = rgb
+        ? (0.2126 * parseInt(rgb[1], 16) + 0.7152 * parseInt(rgb[2], 16) + 0.0722 * parseInt(rgb[3], 16)) / 255
+        : 0.5;
+    const plusColor = luminance > 0.22 ? '#1F3A33' : '#FFE9A0';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">` +
+        `<defs><linearGradient id="pmpg" x1="0" y1="0" x2="1" y2="1">` +
+        `<stop offset="0" stop-color="${primaryColor}"/><stop offset="1" stop-color="${darkColor}"/>` +
+        `</linearGradient></defs>` +
+        `<rect width="64" height="64" rx="12" fill="url(#pmpg)"/>` +
+        `<rect x="3.5" y="3.5" width="57" height="57" rx="9.5" fill="none" stroke="#D4AF37" stroke-width="1.5" opacity="0.9"/>` +
+        `<text x="27" y="51" font-family="'Times New Roman', Times, serif" font-size="50" fill="#FFFFFF" text-anchor="middle">P</text>` +
+        `<text x="46.5" y="26" font-family="'Times New Roman', Times, serif" font-size="28" font-weight="bold" fill="${plusColor}" text-anchor="middle">+</text>` +
+        `</svg>`;
+    link.href = 'data:image/svg+xml,' + encodeURIComponent(svg);
+}
+
 // Apply theme colors
 function applyTheme(primaryColor, darkColor) {
     document.documentElement.style.setProperty('--primary-color', primaryColor);
     document.documentElement.style.setProperty('--primary-dark', darkColor);
+    updateFavicon(primaryColor, darkColor);
 
     // Convert hex to RGB for box-shadow
     const hex2rgb = (hex) => {
@@ -874,6 +954,15 @@ function isColorGreen(hex) {
     return g > r && g > b && g > 100;
 }
 
+// Very dark theme colours (e.g. charcoal) would vanish against the dark
+// panels, so chart marks use a lifted version of those primaries.
+function chartPrimary(color) {
+    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color.trim());
+    if (!m) return color;
+    const lum = (0.2126 * parseInt(m[1], 16) + 0.7152 * parseInt(m[2], 16) + 0.0722 * parseInt(m[3], 16)) / 255;
+    return lum < 0.22 ? lightenColor(color, 0.45) : color;
+}
+
 // Helper function to lighten a color
 function lightenColor(color, factor = 0.2) {
     const num = parseInt(color.replace('#', ''), 16);
@@ -892,85 +981,65 @@ function darkenColor(color, factor = 0.2) {
     return '#' + (r << 16 | g << 8 | b).toString(16).padStart(6, '0');
 }
 
-// Update chart colors
-function updateChartColors(primaryColor, darkColor) {
+// Update chart colors on theme change (mirrors the styling in initCharts)
+function updateChartColors(themeColor, darkColor) {
+    const primaryColor = chartPrimary(themeColor);
+    Chart.defaults.plugins.tooltip.borderColor = primaryColor;
+
     if (charts.daily) {
-        // Create new gradient for daily chart
         const ctx = charts.daily.ctx;
         const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-        gradient.addColorStop(0, primaryColor);
-        gradient.addColorStop(0.5, darkColor);
-        gradient.addColorStop(1, primaryColor + '80');
-        
+        gradient.addColorStop(0, lightenColor(primaryColor, 0.3));
+        gradient.addColorStop(0.55, primaryColor);
+        gradient.addColorStop(1, primaryColor + '30');
+
         charts.daily.data.datasets[0].backgroundColor = gradient;
-        
+        charts.daily.data.datasets[0].hoverBackgroundColor = lightenColor(primaryColor, 0.45);
+
         // Force immediate update with no transition
         charts.daily.options.animation = { duration: 0 };
         charts.daily.update();
         charts.daily.options.animation = { duration: 800 }; // Restore animation
     }
-    
+
     if (charts.weekly) {
-        // For line charts, we need to update point styles immediately
         const dataset = charts.weekly.data.datasets[0];
-        
-        // Create gradient for weekly chart background
+
         const ctx = charts.weekly.ctx;
         const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-        gradient.addColorStop(0, primaryColor + '60');
-        gradient.addColorStop(0.5, primaryColor + '30');
-        gradient.addColorStop(1, primaryColor + '05');
-        
-        // Create gradient for the line itself - more dramatic
-        const lineGradient = ctx.createLinearGradient(0, 0, ctx.canvas.width, 0);
-        lineGradient.addColorStop(0, primaryColor);
-        lineGradient.addColorStop(0.25, darkColor);
-        lineGradient.addColorStop(0.5, lightenColor(primaryColor, 0.3));
-        lineGradient.addColorStop(0.75, darkColor);
-        lineGradient.addColorStop(1, primaryColor);
-        
-        // Update all color properties
-        dataset.borderColor = lineGradient;
+        gradient.addColorStop(0, primaryColor + '40');
+        gradient.addColorStop(0.5, primaryColor + '18');
+        gradient.addColorStop(1, primaryColor + '03');
+
         dataset.backgroundColor = gradient;
-        dataset.pointBackgroundColor = primaryColor;
-        dataset.pointBorderColor = '#fff';
+        dataset.borderColor = lightenColor(primaryColor, 0.15);
+        dataset.pointBackgroundColor = '#0B1216';
+        dataset.pointBorderColor = lightenColor(primaryColor, 0.2);
         dataset.pointHoverBackgroundColor = primaryColor;
         dataset.pointHoverBorderColor = '#fff';
-        
+
         // Force immediate update with no transition
         charts.weekly.options.animation = { duration: 0 };
         charts.weekly.update();
         charts.weekly.options.animation = { duration: 800 }; // Restore animation
     }
-    
+
     if (charts.cumulative) {
-        // For line charts, we need to update point styles immediately
         const dataset = charts.cumulative.data.datasets[0];
-        
-        // Create gradient for cumulative chart background
+
         const ctx = charts.cumulative.ctx;
         const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-        gradient.addColorStop(0, primaryColor + '60');
-        gradient.addColorStop(0.5, primaryColor + '30');
-        gradient.addColorStop(1, primaryColor + '05');
-        
-        // Create gradient for the line itself - very dramatic with contrasting colors
-        const lineGradient = ctx.createLinearGradient(0, 0, ctx.canvas.width, 0);
-        lineGradient.addColorStop(0, darkColor);
-        lineGradient.addColorStop(0.2, lightenColor(primaryColor, 0.4));
-        lineGradient.addColorStop(0.4, darkColor);
-        lineGradient.addColorStop(0.6, primaryColor);
-        lineGradient.addColorStop(0.8, darkenColor(primaryColor, 0.4));
-        lineGradient.addColorStop(1, lightenColor(primaryColor, 0.3));
-        
-        // Update all color properties
-        dataset.borderColor = lineGradient;
+        gradient.addColorStop(0, primaryColor + '3A');
+        gradient.addColorStop(0.5, primaryColor + '16');
+        gradient.addColorStop(1, primaryColor + '03');
+
         dataset.backgroundColor = gradient;
+        dataset.borderColor = lightenColor(primaryColor, 0.2);
         dataset.pointBackgroundColor = primaryColor;
         dataset.pointBorderColor = '#fff';
         dataset.pointHoverBackgroundColor = primaryColor;
         dataset.pointHoverBorderColor = '#fff';
-        
+
         // Force immediate update with no transition
         charts.cumulative.options.animation = { duration: 0 };
         charts.cumulative.update();
@@ -1034,16 +1103,17 @@ if (document.readyState === 'loading') {
     createParticles();
 }
 
-// Morphing Triangles background animation for header
+// ECG trace animation for the header: a telemetry heartbeat in the theme
+// colour, scrolling right to left with a glowing head at the newest sample.
 (function() {
-    function createTriangleAnimation(canvasId) {
+    function createEcgAnimation(canvasId) {
         const canvas = document.getElementById(canvasId);
         if (!canvas) return;
 
         const ctx = canvas.getContext('2d');
         let width, height;
         let dpr = window.devicePixelRatio || 1;
-        let triangles = [];
+        const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         function resize() {
             dpr = window.devicePixelRatio || 1;
@@ -1055,65 +1125,144 @@ if (document.readyState === 'loading') {
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         }
 
-        function initTriangles() {
-            triangles = [];
-            const count = Math.max(8, Math.floor((width * height) / 12000));
-            for (let i = 0; i < count; i++) {
-                const cx = Math.random() * width;
-                const cy = Math.random() * height;
-                const size = Math.random() * 35 + 15;
-                triangles.push({
-                    points: [
-                        { x: cx, y: cy - size, vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3 },
-                        { x: cx + size * 0.866, y: cy + size/2, vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3 },
-                        { x: cx - size * 0.866, y: cy + size/2, vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3 }
-                    ],
-                    opacity: Math.random() * 0.15 + 0.03
-                });
+        function hexToRgb(hex) {
+            const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
+            return m
+                ? `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}`
+                : '10, 186, 181';
+        }
+
+        const bump = (p, centre, w, h) => h * Math.exp(-Math.pow((p - centre) / w, 2));
+
+        // One sinus beat as a vertical offset: P wave, QRS complex, T wave
+        function sinusOffset(s, beatWidth) {
+            const phase = (((s % beatWidth) + beatWidth) % beatWidth) / beatWidth;
+            let y = 0;
+            y += bump(phase, 0.18, 0.025, 4);   // P
+            y -= bump(phase, 0.30, 0.008, 6);   // Q
+            y += bump(phase, 0.325, 0.011, 30); // R
+            y -= bump(phase, 0.35, 0.009, 10);  // S
+            y += bump(phase, 0.52, 0.045, 7);   // T
+            return y;
+        }
+
+        // Atrial flutter: sawtooth F waves at ~4x the sinus rate, 3:1 conduction
+        function flutterOffset(s, beatWidth) {
+            const fw = beatWidth / 4.2;
+            const ph = (((s % fw) + fw) % fw) / fw;
+            const saw = ph < 0.72 ? ph / 0.72 : (1 - ph) / 0.28;
+            let y = saw * 9.5;
+            if (Math.floor(s / fw) % 3 === 0) {
+                y += bump(ph, 0.5, 0.045, 27);
+            }
+            return y;
+        }
+
+        // Torsades de pointes: rapid complexes inside a twisting spindle envelope
+        function torsadesOffset(s, beatWidth) {
+            const p = beatWidth / 5.5;
+            const spindle = beatWidth * 1.5;
+            const amp = 6 + 17 * Math.abs(Math.sin(Math.PI * s / spindle));
+            return amp * Math.sin(2 * Math.PI * s / p);
+        }
+
+        // Rare, irregular arrhythmia episodes drift across the trace and
+        // self-terminate back to sinus rhythm. Positions are in absolute
+        // signal pixels, so an episode scrolls by like a real strip.
+        const episodes = [];
+        let nextEpisodeAt = 3000 + Math.random() * 6000;
+
+        function scheduleEpisodes() {
+            if (t + width + 200 > nextEpisodeAt) {
+                const type = Math.random() < 0.5 ? 'flutter' : 'torsades';
+                const length = 450 + Math.random() * 320;
+                episodes.push({ start: nextEpisodeAt, end: nextEpisodeAt + length, type: type });
+                nextEpisodeAt = nextEpisodeAt + length + 6000 + Math.random() * 10000;
+            }
+            while (episodes.length && episodes[0].end < t - 100) {
+                episodes.shift();
             }
         }
 
-        function animate() {
-            // Get current theme color
+        function signalOffset(s, beatWidth) {
+            const sinus = sinusOffset(s, beatWidth);
+            const ep = episodes.find(e => s >= e.start && s < e.end);
+            if (!ep) return sinus;
+            // Short crossfade so the rhythm change doesn't step
+            const w = Math.min(1, (s - ep.start) / 50, (ep.end - s) / 50);
+            const arr = ep.type === 'flutter'
+                ? flutterOffset(s, beatWidth)
+                : torsadesOffset(s, beatWidth);
+            return sinus * (1 - w) + arr * w;
+        }
+
+        let t = 0;
+        function draw() {
             const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#0ABAB5';
+            const rgb = hexToRgb(primaryColor);
 
             ctx.clearRect(0, 0, width, height);
-            ctx.fillStyle = primaryColor;
-            ctx.fillRect(0, 0, width, height);
 
-            triangles.forEach(tri => {
-                tri.points.forEach(p => {
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    if (p.x < -30 || p.x > width + 30) p.vx *= -1;
-                    if (p.y < -30 || p.y > height + 30) p.vy *= -1;
-                });
+            const baseline = height * 0.74;
+            const beatWidth = Math.max(220, width / 5);
+            const scale = Math.min(1.6, height / 120);
 
-                ctx.beginPath();
-                ctx.moveTo(tri.points[0].x, tri.points[0].y);
-                ctx.lineTo(tri.points[1].x, tri.points[1].y);
-                ctx.lineTo(tri.points[2].x, tri.points[2].y);
-                ctx.closePath();
-                ctx.fillStyle = `rgba(255, 255, 255, ${tri.opacity})`;
-                ctx.fill();
-            });
+            // Trace fades towards the left, brightest at the newest sample
+            const grad = ctx.createLinearGradient(0, 0, width, 0);
+            grad.addColorStop(0, `rgba(${rgb}, 0)`);
+            grad.addColorStop(0.45, `rgba(${rgb}, 0.18)`);
+            grad.addColorStop(1, `rgba(${rgb}, 0.8)`);
 
+            ctx.save();
+            ctx.lineWidth = 1.6;
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = grad;
+            ctx.shadowColor = `rgba(${rgb}, 0.9)`;
+            ctx.shadowBlur = 9;
+            scheduleEpisodes();
+            ctx.beginPath();
+            let headY = baseline;
+            for (let x = 0; x <= width; x += 2) {
+                const y = baseline - signalOffset(x + t, beatWidth) * scale;
+                if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                headY = y;
+            }
+            ctx.stroke();
+            ctx.restore();
+
+            // Glowing head dot at the newest sample
+            ctx.save();
+            ctx.fillStyle = `rgba(${rgb}, 0.95)`;
+            ctx.shadowColor = `rgba(${rgb}, 1)`;
+            ctx.shadowBlur = 14;
+            ctx.beginPath();
+            ctx.arc(width - 1, headY, 2.6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function animate() {
+            t += 1.3;
+            draw();
             requestAnimationFrame(animate);
         }
 
         window.addEventListener('resize', () => {
             resize();
-            initTriangles();
+            if (reducedMotion) draw();
         });
 
         resize();
-        initTriangles();
-        animate();
+        if (reducedMotion) {
+            draw(); // a still trace, no animation loop
+        } else {
+            animate();
+        }
     }
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => createTriangleAnimation('header-bg'));
+        document.addEventListener('DOMContentLoaded', () => createEcgAnimation('header-bg'));
     } else {
-        createTriangleAnimation('header-bg');
+        createEcgAnimation('header-bg');
     }
 })();

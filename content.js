@@ -9,32 +9,19 @@ function getLocalDateString(date = new Date()) {
     return `${year}-${month}-${day}`;
 }
 
+// The extension buttons only belong on the menu page (any query string)
+function isOnMenuPage() {
+    return window.location.hostname.endsWith('passmedicine.com') && window.location.pathname === '/menu.php';
+}
+
 // Function to inject the sync button at the top of all PassMed pages
 async function injectSyncButton() {
-    // Only show on the specific PassMedicine menu pages
-    const currentURL = window.location.href;
-    if (currentURL !== 'https://www.passmedicine.com/menu.php?revise=all' && 
-        currentURL !== 'https://www.passmedicine.com/menu.php') {
+    if (!isOnMenuPage()) {
         return;
     }
-    
+
     // Check if sync button already exists
-    let existingButton = document.getElementById('passmed-sync-button');
-    if (existingButton) {
-        // Check if we need to reset the button after sync
-        const storage = await chrome.storage.local.get(['shouldResetSyncButton']);
-        if (storage.shouldResetSyncButton) {
-            // Reset the button
-            existingButton.innerHTML = `
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;">
-                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/>
-                </svg>
-                <span style="vertical-align: middle;">Sync Progress</span>
-            `;
-            existingButton.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45a049 50%, #388E3C 100%)';
-            existingButton.disabled = false;
-            await chrome.storage.local.remove(['shouldResetSyncButton']);
-        }
+    if (document.getElementById('passmed-sync-button')) {
         return;
     }
     
@@ -78,133 +65,151 @@ async function injectSyncButton() {
     };
     
     // Add click handler
-    syncButton.onclick = async () => {
-            
-        // Update button to show it's working
-        syncButton.innerHTML = `
-            <style>
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-            </style>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle; animation: spin 1s linear infinite;">
-                <path d="M21 12a9 9 0 11-6.219-8.56"/>
-            </svg>
-            <span style="vertical-align: middle;">Syncing...</span>
-        `;
-        syncButton.style.background = 'linear-gradient(135deg, #2196F3 0%, #1976D2 50%, #1565C0 100%)';
-        syncButton.disabled = true;
-        
-        // Check if already on Review Questions page
-        if (isOnReviewQuestionsPage()) {
-            // Already on Review Questions - just extract data directly
-            
-            // Check for "Show all questions" button and click it
-            const showAllButton = document.querySelector('#showallquestions');
-            if (showAllButton && !showAllButton.textContent.includes('Loading')) {
-                showAllButton.click();
-                await waitForAllQuestionsToLoad();
-            }
-            
-            // Extract data
-            setTimeout(async () => {
-                    const reviewData = extractQuestionsFromReviewTable();
-                    
-                if (reviewData.totalQuestions > 0) {
-                    // Save data
-                    const today = getLocalDateString();
-                    const todayCount = reviewData.daily[today] ? reviewData.daily[today].total : 0;
-                    
-                    await chrome.storage.local.set({ 
-                        lastReviewData: reviewData,
-                        lastReviewDataDate: new Date().toISOString(),
-                        todayQuestions: todayCount,
-                        todayQuestionsDate: today
-                    });
-                    
-                    // Sync data
-                    await autoSyncData();
-                    
-                    // Update the floating button with new count
-                    const floatingButton = document.getElementById('passmed-tracker-button');
-                    if (floatingButton) {
-                        const buttonElement = floatingButton.querySelector('button');
-                        if (buttonElement) {
-                            await updateButtonWithTodayStats(buttonElement);
-                        }
-                    }
-                    
-                    // Show success notification with strong gradient
-                    const notification = document.createElement('div');
-                    notification.style.cssText = `
-                        position: fixed;
-                        top: 70px;
-                        left: calc(50% + 60px);
-                        transform: translateX(-50%);
-                        background: linear-gradient(135deg, #4CAF50 0%, #45a049 50%, #388E3C 100%);
-                        color: white;
-                        padding: 15px 30px;
-                        border-radius: 8px;
-                        font-size: 16px;
-                        font-weight: 600;
-                        z-index: 10000;
-                        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-                    `;
-                    notification.innerHTML = `
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                        <span style="vertical-align: middle;">Synced: ${reviewData.totalQuestions} questions from Review Table</span>
-                    `;
-                    document.body.appendChild(notification);
-                    
-                    // Remove notification after 3 seconds
-                    setTimeout(() => notification.remove(), 3000);
-                }
-                
-                // Reset sync button
-                syncButton.innerHTML = `
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;">
-                        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/>
-                    </svg>
-                    <span style="vertical-align: middle;">Sync Progress</span>
-                `;
-                syncButton.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45a049 50%, #388E3C 100%)';
-                syncButton.disabled = false;
-            }, 1000);
-            
-        } else {
-            // Not on Review Questions - need to navigate
-            
-            // Mark that we're syncing so we can extract data after navigation
-            await chrome.storage.local.set({ 
-                syncInProgress: true 
-            });
-            
+    syncButton.onclick = () => runSync(syncButton);
+
+    document.body.appendChild(syncButton);
+}
+
+// --- Sync flow -------------------------------------------------------------
+// PassMedicine's menu is a single-page app: clicking "Review questions" swaps
+// the section content in place (the URL does not change and no page load
+// fires). This content script therefore stays alive across the switch, so the
+// whole sync can run as one in-page async flow with explicit timeouts instead
+// of handing state over via storage flags.
+
+let syncRunning = false;
+
+async function runSync(syncButton) {
+    if (syncRunning) {
+        return;
+    }
+    syncRunning = true;
+    setSyncButtonSyncing(syncButton);
+
+    try {
+        if (!isOnReviewQuestionsPage()) {
             // Find and click the Review Questions link in the sidebar
-            const reviewLink = Array.from(document.querySelectorAll('a, button')).find(el => 
+            const reviewLink = Array.from(document.querySelectorAll('a, button')).find(el =>
                 el.textContent.includes('Review questions') || el.textContent.includes('Review Questions')
             );
-            
-            if (reviewLink) {
-                reviewLink.click();
-            } else {
-                // Fallback: try direct navigation
-                window.location.href = window.location.origin + window.location.pathname + '?section=review_questions';
+            if (!reviewLink) {
+                throw new Error('Could not find the "Review questions" link. Please open it from the sidebar and try again.');
             }
+            reviewLink.click();
+            await waitForReviewSection();
         }
-    };
-    
-    document.body.appendChild(syncButton);
+
+        // Load the complete question history, then extract
+        await waitForAllQuestionsToLoad();
+        const reviewData = extractQuestionsFromReviewTable();
+
+        if (reviewData.totalQuestions === 0) {
+            throw new Error('No answered questions found in the review table.');
+        }
+
+        const response = await syncExtractedData(reviewData);
+        if (!response || !response.success) {
+            throw new Error((response && response.error) || 'Saving progress data failed.');
+        }
+
+        // Update the floating tracker button with the new count
+        const trackerButton = document.querySelector('#passmed-tracker-button button');
+        if (trackerButton) {
+            await updateButtonWithTodayStats(trackerButton);
+        }
+
+        showSyncNotification(`Synced: ${reviewData.totalQuestions} questions from Review Table`, true);
+    } catch (error) {
+        showSyncNotification(`Sync failed: ${error.message}`, false);
+    } finally {
+        setSyncButtonIdle(syncButton);
+        syncRunning = false;
+    }
+}
+
+// Wait for the Review Questions section to appear after an in-page
+// navigation. Waits for actual content (the "Show all" button or answered
+// rows), not just the section heading, so extraction can't race the table.
+async function waitForReviewSection(timeoutMs = 20000) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+        const hasShowAllButton = document.querySelector('#showallquestions') !== null;
+        const hasAnsweredRows = Array.from(document.querySelectorAll('td')).some(td =>
+            td.innerHTML.includes('small_tick.gif') || td.innerHTML.includes('small_cross.gif'));
+        if (hasShowAllButton || hasAnsweredRows) {
+            return;
+        }
+        await sleep(250);
+    }
+    throw new Error('The Review Questions section did not load in time. Please reload the page and try again.');
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function setSyncButtonSyncing(syncButton) {
+    syncButton.innerHTML = `
+        <style>
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+        </style>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle; animation: spin 1s linear infinite;">
+            <path d="M21 12a9 9 0 11-6.219-8.56"/>
+        </svg>
+        <span style="vertical-align: middle;">Syncing...</span>
+    `;
+    syncButton.style.background = 'linear-gradient(135deg, #2196F3 0%, #1976D2 50%, #1565C0 100%)';
+    syncButton.disabled = true;
+}
+
+function setSyncButtonIdle(syncButton) {
+    syncButton.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/>
+        </svg>
+        <span style="vertical-align: middle;">Sync Progress</span>
+    `;
+    syncButton.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45a049 50%, #388E3C 100%)';
+    syncButton.disabled = false;
+}
+
+function showSyncNotification(message, success) {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 70px;
+        left: calc(50% + 60px);
+        transform: translateX(-50%);
+        background: ${success
+            ? 'linear-gradient(135deg, #4CAF50 0%, #45a049 50%, #388E3C 100%)'
+            : 'linear-gradient(135deg, #E53935 0%, #D32F2F 50%, #C62828 100%)'};
+        color: white;
+        padding: 15px 30px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        z-index: 10000;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    `;
+    const icon = success
+        ? '<polyline points="20 6 9 17 4 12"></polyline>'
+        : '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>';
+    notification.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+            ${icon}
+        </svg>
+        <span style="vertical-align: middle;">${message}</span>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), success ? 3000 : 6000);
 }
 
 // Function to inject the tracker button
 async function injectTrackerButton() {
-    // Only show on the specific PassMedicine menu pages
-    const currentURL = window.location.href;
-    if (currentURL !== 'https://www.passmedicine.com/menu.php?revise=all' && 
-        currentURL !== 'https://www.passmedicine.com/menu.php') {
+    if (!isOnMenuPage()) {
         return;
     }
     
@@ -584,50 +589,55 @@ if (document.readyState === 'loading') {
     injectSyncButton();
 }
 
-// Function to wait for review table to load all questions
-async function waitForAllQuestionsToLoad() {
-    return new Promise((resolve) => {
-        // Check if we're on review questions page
-        const showAllButton = document.querySelector('#showallquestions');
-        if (showAllButton && !showAllButton.textContent.includes('Loading')) {
-            showAllButton.click();
-            
-            // Wait for loading to complete
-            const checkInterval = setInterval(() => {
-                const button = document.querySelector('#showallquestions');
-                if (!button || !button.textContent.includes('Loading')) {
-                    clearInterval(checkInterval);
-                    // Give a bit more time for DOM to settle
-                    setTimeout(() => {
-                        resolve();
-                    }, 500);
-                }
-            }, 100);
-            
-            // Timeout after 30 seconds
-            setTimeout(() => {
-                clearInterval(checkInterval);
-                resolve();
-            }, 30000);
-        } else {
-            // No button or already loading/loaded
-            resolve();
+// Load the full question history. PassMedicine initially shows only the most
+// recent ~100 rows plus a "Show all N questions" button; clicking it changes
+// its text to "Please wait... Loading..." and, once every row is in the DOM,
+// removes the button entirely. This function owns the click - callers must
+// not click the button themselves first.
+async function waitForAllQuestionsToLoad(timeoutMs = 60000) {
+    let showAllButton = document.querySelector('#showallquestions');
+    if (!showAllButton) {
+        // Button already removed - all questions are shown
+        return;
+    }
+    if (!showAllButton.textContent.includes('Loading')) {
+        showAllButton.click();
+    }
+
+    // Wait until the button is removed (load finished) or, as a fallback,
+    // until it leaves the loading state with a stable row count.
+    const start = Date.now();
+    let lastRowCount = -1;
+    let stablePolls = 0;
+    while (Date.now() - start < timeoutMs) {
+        await sleep(250);
+        showAllButton = document.querySelector('#showallquestions');
+        if (!showAllButton) {
+            break;
         }
-    });
+        const rowCount = document.querySelectorAll('table tr').length;
+        if (!showAllButton.textContent.includes('Loading') && rowCount === lastRowCount) {
+            if (++stablePolls >= 3) {
+                break;
+            }
+        } else {
+            stablePolls = 0;
+        }
+        lastRowCount = rowCount;
+    }
+    if (document.querySelector('#showallquestions')?.textContent.includes('Loading')) {
+        throw new Error('Loading all questions timed out. Please try again.');
+    }
+
+    // Give the DOM a moment to settle
+    await sleep(400);
 }
 
 
-// Function to check if we're on the Review Questions page
+// Function to check if the Review Questions section is currently displayed.
+// The menu is a single-page app whose URL never reflects the open section, so
+// this has to be detected from the DOM.
 function isOnReviewQuestionsPage() {
-    // First check URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const section = urlParams.get('section');
-    
-    if (section === 'review_questions') {
-        return true;
-    }
-    
-    // Check for specific elements that only appear on review questions page
     const hasShowAllButton = document.querySelector('#showallquestions') !== null;
     const hasReviewHeading = Array.from(document.querySelectorAll('h1, h2, h3')).some(h => 
         h.textContent.includes('Review questions') || h.textContent.includes('Review Questions')
@@ -789,15 +799,6 @@ function extractQuestionsFromReviewTable() {
 }
 
 // Removed heatmap extraction function - only using Review Questions data
-
-// Function to send data to background script
-function sendProgressData(data) {
-    chrome.runtime.sendMessage({
-        action: 'saveProgress',
-        data: data
-    }, response => {
-    });
-}
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -961,412 +962,77 @@ window.addEventListener('load', () => {
     }, 1000);
 });
 
-// Removed navigation function - we don't want to force navigation
+// Save freshly extracted review data and hand it to the background script.
+// Returns the background script's response ({ success, ... }) so the caller
+// can report a real result to the user.
+async function syncExtractedData(reviewData) {
+    const today = getLocalDateString();
+    const todayCount = reviewData.daily[today] ? reviewData.daily[today].total : 0;
 
-// Background fetch is not possible - PassMed loads content dynamically
-// User must visit Review Questions page at least once
-
-// Function to extract questions from HTML document (not current page)
-function extractQuestionsFromHTML(doc) {
-    const questionsData = {
-        daily: {},
-        totalQuestions: 0,
-        correctQuestions: 0,
-        incorrectQuestions: 0,
-        questions: []
-    };
-    
-    // Same extraction logic but using the provided document
-    const reviewTables = doc.querySelectorAll('table');
-    
-    for (const table of reviewTables) {
-        const rows = table.querySelectorAll('tr');
-        
-        for (const row of rows) {
-            const cells = row.querySelectorAll('td');
-            
-            if (cells.length >= 4) {
-                const dateCell = cells[0];
-                const dateText = dateCell.textContent.trim();
-                
-                if (dateText.match(/^\d{1,2}\s+\w{3}\s+\d{2}$/)) {
-                    const [day, monthAbbr, yearShort] = dateText.split(/\s+/);
-                    const year = parseInt(yearShort) < 50 ? `20${yearShort}` : `19${yearShort}`;
-                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                    const monthIndex = monthNames.indexOf(monthAbbr);
-                    
-                    if (monthIndex !== -1) {
-                        const dateObj = new Date(year, monthIndex, parseInt(day));
-                        // Use local date format to avoid timezone issues
-                        const dateKey = `${year}-${(monthIndex + 1).toString().padStart(2, '0')}-${day.padStart(2, '0')}`;
-                        
-                        const resultCell = cells[2];
-                        const resultText = resultCell.textContent.trim();
-                        const resultHTML = resultCell.innerHTML;
-                        
-                        const fractionMatch = resultText.match(/(\d+)\s*\/\s*(\d+)/);
-                        let correctParts = 0;
-                        let totalParts = 1;
-                        let hasResult = false;
-                        
-                        if (fractionMatch) {
-                            correctParts = parseInt(fractionMatch[1]);
-                            totalParts = parseInt(fractionMatch[2]);
-                            hasResult = true;
-                        } else if (resultHTML.includes('small_tick.gif')) {
-                            correctParts = 1;
-                            totalParts = 1;
-                            hasResult = true;
-                        } else if (resultHTML.includes('small_cross.gif')) {
-                            correctParts = 0;
-                            totalParts = 1;
-                            hasResult = true;
-                        }
-                        
-                        if (hasResult) {
-                            const questionCell = cells[1];
-                            const titleMatch = questionCell.innerHTML.match(/<b>(.*?)<\/b>/);
-                            const title = titleMatch ? titleMatch[1] : '';
-                            
-                            const hammerCount = (questionCell.innerHTML.match(/icon-hammer/g) || []).length;
-                            
-                            let questionCount = totalParts;
-                            
-                            if (questionCell.innerHTML.includes('badge') && questionCell.innerHTML.includes('EMQ')) {
-                                if (totalParts === 1) {
-                                    questionCount = 3;
-                                }
-                            }
-                            
-                            if (!questionsData.daily[dateKey]) {
-                                questionsData.daily[dateKey] = { total: 0, correct: 0, incorrect: 0 };
-                            }
-                            
-                            questionsData.daily[dateKey].total += questionCount;
-                            questionsData.totalQuestions += questionCount;
-                            
-                            questionsData.daily[dateKey].correct += correctParts;
-                            questionsData.correctQuestions += correctParts;
-                            
-                            const incorrectParts = totalParts - correctParts;
-                            questionsData.daily[dateKey].incorrect += incorrectParts;
-                            questionsData.incorrectQuestions += incorrectParts;
-                            
-                            const isFullyCorrect = correctParts === totalParts;
-                            const scoreText = totalParts > 1 ? `${correctParts}/${totalParts}` : (isFullyCorrect ? 'correct' : 'incorrect');
-                            
-                            questionsData.questions.push({
-                                date: dateKey,
-                                title: title,
-                                difficulty: hammerCount,
-                                correct: isFullyCorrect,
-                                correctParts: correctParts,
-                                totalParts: totalParts,
-                                dateText: dateText,
-                                questionCount: questionCount,
-                                isMultiPart: questionCount > 1
-                            });
-                            
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    return questionsData;
-}
-
-// Auto-sync function
-async function autoSyncData() {
-    let reviewData = { daily: {}, totalQuestions: 0, correctQuestions: 0, incorrectQuestions: 0, questions: [] };
-    
-    // If we're on review questions page, extract directly
-    if (isOnReviewQuestionsPage()) {
-        const showAllButton = document.querySelector('#showallquestions');
-        if (showAllButton && !showAllButton.textContent.includes('Loading')) {
-            showAllButton.click();
-            await waitForAllQuestionsToLoad();
-        }
-        
-        reviewData = extractQuestionsFromReviewTable();
-    } else {
-        // Not on Review Questions page - use stored data
-        const storedData = await chrome.storage.local.get(['lastReviewData', 'lastReviewDataDate']);
-        if (storedData.lastReviewData) {
-            reviewData = storedData.lastReviewData;
-            
-            // Check how old the data is
-            if (storedData.lastReviewDataDate) {
-                const lastUpdate = new Date(storedData.lastReviewDataDate);
-                const now = new Date();
-                const hoursSinceUpdate = (now - lastUpdate) / (1000 * 60 * 60);
-                
-                if (hoursSinceUpdate > 24) {
-                }
-            }
-        } else {
-        }
-    }
-    
-    let dataToSync;
-    let source = 'Review Table';
-    
-    if (reviewData && reviewData.totalQuestions > 0) {
-        // Store the full review data for button updates
-        const today = getLocalDateString();
-        const todayCount = reviewData.daily[today] ? reviewData.daily[today].total : 0;
-        
-        chrome.storage.local.set({ 
-            lastReviewData: reviewData,
-            lastReviewDataDate: new Date().toISOString(),
-            todayQuestions: todayCount,
-            todayQuestionsDate: today
-        });
-        
-        // Convert review data format
-        const dailyData = {};
-        for (const [date, stats] of Object.entries(reviewData.daily)) {
-            dailyData[date] = stats.total;
-        }
-        
-        dataToSync = {
-            daily: dailyData,
-            totalQuestions: reviewData.totalQuestions,
-            correctQuestions: reviewData.correctQuestions,
-            incorrectQuestions: reviewData.incorrectQuestions,
-            source: 'review_table'
-        };
-    } else {
-        return;
-    }
-    
-    if (dataToSync && Object.keys(dataToSync.daily).length > 0) {
-        
-        // Send directly to background for syncing
-        chrome.runtime.sendMessage({
-            action: 'syncToTracker',
-            data: dataToSync,
-            auto: true
-        }, response => {
-            if (response && response.success) {
-                // Store last sync time
-                chrome.storage.local.set({ 
-                    lastExtractedData: dataToSync,
-                    lastSyncTime: new Date().toISOString(),
-                    lastAutoSync: new Date().toISOString(),
-                    lastSyncSource: source
-                });
-            }
-        });
-    }
-}
-
-// Function to prompt user to visit Review Questions for fresh data
-async function checkForReviewDataFreshness() {
-    const storedData = await chrome.storage.local.get(['lastReviewDataDate']);
-    
-    if (!storedData.lastReviewDataDate) {
-        return false;
-    }
-    
-    const lastUpdate = new Date(storedData.lastReviewDataDate);
-    const now = new Date();
-    const hoursSinceUpdate = (now - lastUpdate) / (1000 * 60 * 60);
-    
-    if (hoursSinceUpdate > 24) {
-        return false;
-    }
-    
-    return true;
-}
-
-// Function to handle automatic data extraction
-async function handleAutoDataExtraction() {
-    // Check if we're in the middle of a sync process
-    const storage = await chrome.storage.local.get(['syncInProgress']);
-    
-    if (storage.syncInProgress && isOnReviewQuestionsPage()) {
-        
-        // Clear the sync flag
-        await chrome.storage.local.remove(['syncInProgress']);
-        
-        // Show the sync button in loading state
-        const syncButton = document.getElementById('passmed-sync-button');
-        if (syncButton) {
-            syncButton.innerHTML = `
-                <style>
-                    @keyframes spin {
-                        from { transform: rotate(0deg); }
-                        to { transform: rotate(360deg); }
-                    }
-                </style>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle; animation: spin 1s linear infinite;">
-                    <path d="M21 12a9 9 0 11-6.219-8.56"/>
-                </svg>
-                <span style="vertical-align: middle;">Syncing...</span>
-            `;
-            syncButton.style.background = 'linear-gradient(135deg, #2196F3 0%, #1976D2 50%, #1565C0 100%)';
-            syncButton.disabled = true;
-        }
-        
-        // Wait for page to load and extract data
-        setTimeout(async () => {
-            // Check for "Show all questions" button and click it
-            const showAllButton = document.querySelector('#showallquestions');
-            if (showAllButton && !showAllButton.textContent.includes('Loading')) {
-                showAllButton.click();
-                await waitForAllQuestionsToLoad();
-            }
-            
-            // Extract data
-            setTimeout(async () => {
-                    const reviewData = extractQuestionsFromReviewTable();
-                    
-                if (reviewData.totalQuestions > 0) {
-                    // Save data
-                    const today = getLocalDateString();
-                    const todayCount = reviewData.daily[today] ? reviewData.daily[today].total : 0;
-                    
-                    await chrome.storage.local.set({ 
-                        lastReviewData: reviewData,
-                        lastReviewDataDate: new Date().toISOString(),
-                        todayQuestions: todayCount,
-                        todayQuestionsDate: today
-                    });
-                    
-                    // Sync data
-                    await autoSyncData();
-                    
-                    // Update the floating button with new count
-                    const floatingButton = document.getElementById('passmed-tracker-button');
-                    if (floatingButton) {
-                        const buttonElement = floatingButton.querySelector('button');
-                        if (buttonElement) {
-                            await updateButtonWithTodayStats(buttonElement);
-                        }
-                    }
-                    
-                    // Show success notification with strong gradient
-                    const notification = document.createElement('div');
-                    notification.style.cssText = `
-                        position: fixed;
-                        top: 70px;
-                        left: calc(50% + 60px);
-                        transform: translateX(-50%);
-                        background: linear-gradient(135deg, #4CAF50 0%, #45a049 50%, #388E3C 100%);
-                        color: white;
-                        padding: 15px 30px;
-                        border-radius: 8px;
-                        font-size: 16px;
-                        font-weight: 600;
-                        z-index: 10000;
-                        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-                    `;
-                    notification.innerHTML = `
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                        <span style="vertical-align: middle;">Synced: ${reviewData.totalQuestions} questions from Review Table</span>
-                    `;
-                    document.body.appendChild(notification);
-                    
-                    // Remove notification after 3 seconds
-                    setTimeout(() => notification.remove(), 3000);
-                    
-                    // Update tracker button
-                    const trackerButton = document.querySelector('#passmed-tracker-button button');
-                    if (trackerButton) {
-                        await updateButtonWithTodayStats(trackerButton);
-                    }
-                }
-                
-                // Reset sync button
-                if (syncButton) {
-                    syncButton.innerHTML = `
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;">
-                            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/>
-                        </svg>
-                        <span style="vertical-align: middle;">Sync Progress</span>
-                    `;
-                    syncButton.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45a049 50%, #388E3C 100%)';
-                    syncButton.disabled = false;
-                }
-            }, 1000);
-        }, 2000);
-    }
-    // Removed auto-sync on Review Questions page - user must press Sync button
-}
-
-// Always call handleAutoDataExtraction when page loads
-// Use both DOMContentLoaded and load to ensure it runs
-if (document.readyState === 'complete') {
-    setTimeout(async () => {
-        await handleAutoDataExtraction();
-        // Removed auto-sync - user must press Sync button
-    }, 2000);
-} else {
-    window.addEventListener('load', () => {
-        setTimeout(async () => {
-            await handleAutoDataExtraction();
-
-            // Removed auto-sync - user must press Sync button
-
-            // Update button with stored review data if available
-            const button = document.querySelector('#passmed-tracker-button button');
-            if (button) {
-                updateButtonWithTodayStats(button);
-            }
-
-            // Also inject both buttons
-            injectTrackerButton();
-            injectSyncButton();
-        }, 2000); // Wait 2 seconds for any dynamic content
+    await chrome.storage.local.set({
+        lastReviewData: reviewData,
+        lastReviewDataDate: new Date().toISOString(),
+        todayQuestions: todayCount,
+        todayQuestionsDate: today
     });
+
+    // Convert review data format
+    const dailyData = {};
+    for (const [date, stats] of Object.entries(reviewData.daily)) {
+        dailyData[date] = stats.total;
+    }
+
+    const dataToSync = {
+        daily: dailyData,
+        totalQuestions: reviewData.totalQuestions,
+        correctQuestions: reviewData.correctQuestions,
+        incorrectQuestions: reviewData.incorrectQuestions,
+        source: 'review_table'
+    };
+
+    const response = await chrome.runtime.sendMessage({
+        action: 'syncToTracker',
+        data: dataToSync,
+        auto: true
+    });
+
+    if (response && response.success) {
+        await chrome.storage.local.set({
+            lastExtractedData: dataToSync,
+            lastSyncTime: new Date().toISOString(),
+            lastSyncSource: 'Review Table'
+        });
+    }
+
+    return response;
 }
 
-// Also try to detect AJAX updates - but only for UI updates, not auto-sync
-const observer = new MutationObserver((mutations) => {
-    // Debounce to avoid too many extractions
-    clearTimeout(window.extractTimeout);
-    window.extractTimeout = setTimeout(() => {
-        // Track page navigation for UI updates only
-        if (isOnReviewQuestionsPage() && !window.wasOnReviewPage) {
-            window.wasOnReviewPage = true;
-        } else if (!isOnReviewQuestionsPage() && window.wasOnReviewPage) {
-            window.wasOnReviewPage = false;
+// Clean up state left behind by older versions of the extension, and refresh
+// the tracker button once the page has fully loaded.
+window.addEventListener('load', () => {
+    setTimeout(async () => {
+        try {
+            await chrome.storage.local.remove(['syncInProgress', 'shouldResetSyncButton', 'autoExtractInProgress']);
+        } catch (error) {
         }
-        // Removed auto-sync - user must press Sync button
-    }, 1000);
+
+        const button = document.querySelector('#passmed-tracker-button button');
+        if (button) {
+            updateButtonWithTodayStats(button);
+        }
+
+        injectTrackerButton();
+        injectSyncButton();
+    }, 2000); // Wait 2 seconds for any dynamic content
 });
 
-// Start observing for dynamic content changes
-observer.observe(document.body, {
-    childList: true,
-    subtree: true
-});
-
-// Also listen for navigation within the SPA
+// The menu is a single-page app, so watch for section changes to keep the
+// buttons present (they live on the fixed header, but re-inject defensively).
 let lastPageType = null;
 setInterval(() => {
-    const currentlyOnReview = isOnReviewQuestionsPage();
-    const currentPageType = currentlyOnReview ? 'review' : 'other';
-
+    const currentPageType = isOnReviewQuestionsPage() ? 'review' : 'other';
     if (currentPageType !== lastPageType) {
-        if (currentlyOnReview) {
-            // Check if this is part of auto-extraction (from Sync button click)
-            chrome.storage.local.get(['autoExtractInProgress'], async (data) => {
-                if (data.autoExtractInProgress) {
-                    // This is auto-extraction from Sync button - handle it
-                    await handleAutoDataExtraction();
-                }
-                // Removed auto-sync on regular navigation - user must press Sync button
-            });
-        }
         lastPageType = currentPageType;
-
-        // Always ensure both buttons are present on any navigation
         injectTrackerButton();
         injectSyncButton();
     }
