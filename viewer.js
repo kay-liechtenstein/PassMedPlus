@@ -1134,15 +1134,20 @@ if (document.readyState === 'loading') {
 
         const bump = (p, centre, w, h) => h * Math.exp(-Math.pow((p - centre) / w, 2));
 
-        // One sinus beat as a vertical offset: P wave, QRS complex, T wave
+        // One sinus beat as a vertical offset: P wave, QRS complex, T wave.
+        // Phases are fractions of an R-R interval read as 5 large boxes (1.0s,
+        // 60bpm), which puts QRS at 100ms, PR at ~185ms and QT at ~390ms. Widen
+        // the complex without shortening beatWidth to match and the trace reads
+        // as bradycardia, since QRS width is the only scale cue on an ungridded
+        // strip.
         function sinusOffset(s, beatWidth) {
             const phase = (((s % beatWidth) + beatWidth) % beatWidth) / beatWidth;
             let y = 0;
-            y += bump(phase, 0.18, 0.025, 4);   // P
-            y -= bump(phase, 0.30, 0.008, 6);   // Q
-            y += bump(phase, 0.325, 0.011, 30); // R
-            y -= bump(phase, 0.35, 0.009, 10);  // S
-            y += bump(phase, 0.52, 0.045, 7);   // T
+            y += bump(phase, 0.215, 0.030, 4);   // P
+            y -= bump(phase, 0.360, 0.0095, 6);  // Q
+            y += bump(phase, 0.390, 0.013, 30);  // R
+            y -= bump(phase, 0.420, 0.011, 10);  // S
+            y += bump(phase, 0.625, 0.054, 7);   // T
             return y;
         }
 
@@ -1204,7 +1209,7 @@ if (document.readyState === 'loading') {
             ctx.clearRect(0, 0, width, height);
 
             const baseline = height * 0.74;
-            const beatWidth = Math.max(220, width / 5);
+            const beatWidth = Math.max(184, width / 6);
             const scale = Math.min(1.6, height / 120);
 
             // Trace fades towards the left, brightest at the newest sample
