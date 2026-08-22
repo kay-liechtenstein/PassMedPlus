@@ -1,6 +1,6 @@
 ## PassMedPlus: PassMed Progress Tracker Extension
 
-Hi! I'm Kay, Y4 medic at Manchester University. I've made a Google Chrome extension that automatically extracts your progress data from PassMed and syncs it with your own progress tracker. Heatmap is visibly quite unhelpful in my opinion so this tracker employs more appropriate graph types.
+Hi! I'm Kay, Y4 medic at Manchester University. I've made a Google Chrome extension that automatically extracts your progress data from PassMed and syncs it with your own progress tracker. Heatmap is visibly quite unhelpful in my opinion so this tracker employs more appropriate visual representations.
 
 ## Installation
 
