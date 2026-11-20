@@ -154,10 +154,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const localData = await chrome.storage.local.get(['todayQuestions', 'todayQuestionsDate']);
             const now = new Date();
             const today = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
-            const todayQuestions = (localData.todayQuestionsDate === today) ? localData.todayQuestions : 0;
+            // Stored values end up in innerHTML below: coerce them to numbers
+            const todayQuestions = (localData.todayQuestionsDate === today) ? (Number(localData.todayQuestions) || 0) : 0;
             
             const activeDays = Object.keys(data.daily).length;
-            const totalQuestions = Object.values(data.daily).reduce((sum, count) => sum + count, 0);
+            const totalQuestions = Object.values(data.daily).reduce((sum, count) => sum + (Number(count) || 0), 0);
 
             // Calculate total days from first record to today (including inactive days)
             const dates = Object.keys(data.daily).sort();
@@ -207,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     html += `<div class="recent-item">
                         <span>${formatted}</span>
-                        <span>${count} questions</span>
+                        <span>${Number(count) || 0} questions</span>
                     </div>`;
                 });
                 
@@ -263,7 +264,12 @@ document.addEventListener('DOMContentLoaded', () => {
     initialize();
     
     // Listen for refresh messages from content script
+    // (sent by content.js from the PassMedicine page that embeds this popup)
     window.addEventListener('message', (event) => {
+        if (event.source !== window.parent ||
+            !/^https:\/\/(www\.)?passmedicine\.com$/.test(event.origin)) {
+            return;
+        }
         if (event.data && event.data.action === 'refreshData') {
             displayStoredData();
         }

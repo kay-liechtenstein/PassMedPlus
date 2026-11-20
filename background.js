@@ -2,6 +2,10 @@
 
 // Handle messages from popup and content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    // Only this extension's own pages and content scripts may talk to us
+    if (sender.id !== chrome.runtime.id || !request) {
+        return;
+    }
     if (request.action === 'syncToTracker') {
         syncDataToStorage(request.data, request.auto)
             .then(result => sendResponse(result))
@@ -22,8 +26,14 @@ async function syncDataToStorage(data, isAuto = false) {
         const existingData = await getProgressData();
 
         // Merge new data with existing data
+        // Accept only YYYY-MM-DD keys with non-negative integer counts, so
+        // nothing but numbers ever reaches storage (and the popup's markup)
         let updatedCount = 0;
-        for (const [date, count] of Object.entries(data.daily)) {
+        const daily = (data && typeof data.daily === 'object' && data.daily) || {};
+        for (const [date, count] of Object.entries(daily)) {
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isSafeInteger(count)) {
+                continue;
+            }
             if (count > 0) {
                 if (!existingData.daily[date] || existingData.daily[date] !== count) {
                     existingData.daily[date] = count;

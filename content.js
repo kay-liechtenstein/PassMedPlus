@@ -79,6 +79,10 @@ async function injectSyncButton() {
 
 let syncRunning = false;
 
+// Messages to the embedded popup iframe go only to this extension's origin,
+// never '*' (the host page could have re-pointed the iframe elsewhere)
+const EXTENSION_ORIGIN = new URL(chrome.runtime.getURL('')).origin;
+
 async function runSync(syncButton) {
     if (syncRunning) {
         return;
@@ -201,8 +205,10 @@ function showSyncNotification(message, success) {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
             ${icon}
         </svg>
-        <span style="vertical-align: middle;">${message}</span>
+        <span style="vertical-align: middle;"></span>
     `;
+    // The message can carry error text, so never parse it as HTML
+    notification.querySelector('span').textContent = message;
     document.body.appendChild(notification);
     setTimeout(() => notification.remove(), success ? 3000 : 6000);
 }
@@ -357,7 +363,7 @@ async function injectTrackerButton() {
             } else {
                 // Already loaded, just refresh data
                 setTimeout(() => {
-                    iframe.contentWindow.postMessage({ action: 'refreshData' }, '*');
+                    iframe.contentWindow.postMessage({ action: 'refreshData' }, EXTENSION_ORIGIN);
                 }, 50);
             }
         }
@@ -409,7 +415,7 @@ async function injectTrackerButton() {
             // Update popup if it's open
             const popupIframe = document.querySelector('#passmed-tracker-popup iframe');
             if (popupIframe) {
-                popupIframe.contentWindow.postMessage({ action: 'updateThemeColor', color: newColor }, '*');
+                popupIframe.contentWindow.postMessage({ action: 'updateThemeColor', color: newColor }, EXTENSION_ORIGIN);
             }
             
             // Remove the input
@@ -499,7 +505,7 @@ async function updateButtonWithTodayStats(button) {
         
         // Quick check for today's questions from cache
         if (storedData.todayQuestionsDate === today && storedData.todayQuestions !== undefined) {
-            const todayCount = storedData.todayQuestions;
+            const todayCount = Number(storedData.todayQuestions) || 0;
             button.innerHTML = `
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;">
                     <line x1="12" y1="20" x2="12" y2="10"></line>
@@ -514,7 +520,7 @@ async function updateButtonWithTodayStats(button) {
         
         if (storedData.lastReviewData && storedData.lastReviewData.daily && storedData.lastReviewData.daily[today]) {
             // Use stored review data (with proper multi-part counting)
-            const todayCount = storedData.lastReviewData.daily[today].total;
+            const todayCount = Number(storedData.lastReviewData.daily[today].total) || 0;
             button.innerHTML = `
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;">
                     <line x1="12" y1="20" x2="12" y2="10"></line>
@@ -546,7 +552,7 @@ async function updateButtonWithTodayStats(button) {
                     <line x1="6" y1="20" x2="6" y2="16"></line>
                 </svg>
                 <span style="vertical-align: middle;">Progress Tracker</span>
-                <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-left: 8px;">${localData.todayQuestions} today</span>
+                <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-left: 8px;">${Number(localData.todayQuestions) || 0} today</span>
             `;
         } else {
             // Show "0 today" if no questions done today
